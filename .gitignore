@@ -1,0 +1,39 @@
+#Archivo .gitignore para el proyecto EcoEduca
+
+###Archivos de Dependencias y Entorno###
+
+#Ignora las carpetas de dependencias de Node.js.
+node_modules/
+EcoEducaAPI/node_modules/
+EcoEducaAPP/node_modules/
+
+
+# Ignora el archivo de variables de entorno.
+.env
+eco-educa-api/.env
+
+
+### Archivos de Build y Logs ###
+
+# Ignora la carpeta de producción que genera Vite (frontend)
+dist/
+EcoEducaAPP/dist/
+
+# Ignora los logs de errores de npm
+npm-debug.log*
+*.log
+
+
+### Archivos del Sistema Operativo ###
+
+# Archivos de metadatos de macOS
+.DS_Store
+
+# Vistas en miniatura de Windows
+Thumbs.db
+
+
+### Archivos del Editor de Código ###
+
+# Configuraciones específicas de VS Code del usuario
+.vscode/
