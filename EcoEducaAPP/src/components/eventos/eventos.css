@@ -1,0 +1,46 @@
+/* Eventos Component Styles */
+
+/* Animación de hojas cayendo */
+@keyframes fall-leaf {
+    0% {
+        top: -10px;
+        opacity: 0;
+        transform: translateX(0) rotateZ(0deg);
+    }
+    10% {
+        opacity: 0.7;
+    }
+    90% {
+        opacity: 0.7;
+    }
+    100% {
+        top: 100%;
+        opacity: 0;
+        transform: translateX(100px) rotateZ(360deg);
+    }
+}
+
+.animate-fall-leaf {
+    animation: fall-leaf 3s linear infinite;
+}
+
+/* Estilos para tarjetas de eventos */
+.evento-card {
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.evento-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(34, 197, 94, 0.25) !important;
+}
+
+/* Estilos para detalles de evento */
+.evento-detalle {
+    transition: all 0.3s ease;
+}
+
+.evento-detalle-header {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    box-shadow: 0 8px 16px rgba(34, 197, 94, 0.2);
+}
+
