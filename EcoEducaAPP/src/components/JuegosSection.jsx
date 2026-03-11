@@ -6,8 +6,13 @@ const juegos = [
     titulo: "Clasificación de Residuos",
     descripcion: "Arrastra la basura al contenedor correcto",
     juegoKey: "juego-residuos"
-  }
-  // Puedes agregar más juegos aquí
+  },
+  {
+    titulo: "Proceso de Reciclaje (Animado)",
+    descripcion: "Descubre el paso a paso del reciclaje con animaciones.",
+    juegoKey: "juego-reciclaje-animado"
+  },
+
 ];
 
 const JuegosSection = ({ onSelectJuego }) => {
@@ -57,8 +62,7 @@ const JuegosSection = ({ onSelectJuego }) => {
     </div>
   </div>
 
-  {/* Animación de hojas mejorada */}
-  <style jsx>{`
+  <style>{`
     @keyframes fall-leaf-left {
       0% { 
         transform: translateY(-20px) translateX(0px) rotate(0deg) scale(0.8);

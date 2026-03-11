@@ -49,20 +49,43 @@ export default function JuegoResiduos() {
 
   useEffect(() => {
     (async () => {
+      // Preferir userId desde localStorage para consistencia
+      try {
+        const u = JSON.parse(localStorage.getItem('user'));
+        if (u && (u.id || u._id)) {
+          setUserId(u.id || u._id);
+        }
+      } catch (_) {}
       // Obtener usuario del token
       const token = localStorage.getItem('token');
       if (token) {
         try {
-          const userResponse = await fetch('http://localhost:3001/api/usuarios/me', {
+          // Intentar primero el endpoint estable /v1/users/profile
+          const profileResponse = await fetch('http://localhost:3002/api/v1/users/profile', {
             headers: { 'Authorization': `Bearer ${token}` }
           });
-          if (userResponse.ok) {
-            const userData = await userResponse.json();
-            setUserId(userData.id);
-            setMejorPuntuacion(userData.puntuacion || 0);
+          if (profileResponse.ok) {
+            const profile = await profileResponse.json();
+            // console.debug('Perfil /v1/users/profile:', profile);
+            setUserId(prev => prev ?? profile.id);
+            setMejorPuntuacion(profile.puntuacion || 0);
+          } else {
+            // Fallback a /usuarios/me solo si el perfil falla
+            const userResponse = await fetch('http://localhost:3002/api/usuarios/me', {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (userResponse.ok) {
+              const userData = await userResponse.json();
+              // console.debug('Perfil /usuarios/me:', userData);
+              setUserId(prev => prev ?? userData.id);
+              setMejorPuntuacion(userData.puntuacion || 0);
+            } else {
+              // Evitar logs ruidosos en producción, solo aviso mínimo
+              // console.warn('No se pudo obtener perfil de usuario (me/profile).');
+            }
           }
         } catch (err) {
-          console.error('Error obteniendo datos del usuario:', err);
+          // console.warn('Error obteniendo datos del usuario:', err);
         }
       }
       // Generar objetos iniciales
@@ -77,10 +100,23 @@ export default function JuegoResiduos() {
   // Obtener consejo cuando termina el juego
   useEffect(() => {
     if (gameOver) {
-      fetch('http://localhost:3001/api/consejo-aleatorio')
+      fetch('http://localhost:3002/api/consejo-aleatorio')
         .then(res => res.json())
         .then(data => setConsejo(data.descripcion || ""))
         .catch(() => setConsejo(""));
+
+      // Registrar puntos del día para Misiones Diarias
+      try {
+        const hoyISO = new Date().toISOString().slice(0, 10);
+        const actual = puntajeFinal || puntaje;
+        const uid = userId ?? 'anon';
+        const key = `residuos_puntos_${hoyISO}_u${uid}`;
+        const almacenado = Number(localStorage.getItem(key)) || 0;
+        const mejorDelDia = Math.max(almacenado, actual);
+        localStorage.setItem(key, mejorDelDia);
+      } catch (_) {
+        // Ignorar errores de localStorage
+      }
     }
   }, [gameOver]);
 
@@ -151,7 +187,7 @@ export default function JuegoResiduos() {
     if (!token) return;
 
     try {
-      const response = await fetch('http://localhost:3001/api/usuarios/me/guardar-mejor-puntaje', {
+      const response = await fetch('http://localhost:3002/api/usuarios/me/guardar-mejor-puntaje', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

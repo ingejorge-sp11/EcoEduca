@@ -11,12 +11,15 @@
   },
   "dependencies": {
     "framer-motion": "^12.25.0",
+    "konva": "^10.2.0",
     "leaflet": "^1.9.4",
+    "leaflet.heat": "^0.2.0",
     "lucide-react": "^0.544.0",
     "react": "^18.2.0",
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
     "react-dom": "^18.2.0",
+    "react-konva": "^18.2.14",
     "react-leaflet": "^4.2.1"
   },
   "devDependencies": {

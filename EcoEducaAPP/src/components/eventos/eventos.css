@@ -44,3 +44,23 @@
     box-shadow: 0 8px 16px rgba(34, 197, 94, 0.2);
 }
 
+/* Franja de tierra simulada bajo cabeceras verdes */
+.soil-strip {
+    height: 8px;
+    background: linear-gradient(180deg, #8B5E3C 0%, #6B4423 100%);
+    position: relative;
+}
+.soil-strip::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; top: 0; height: 100%;
+    background-image: repeating-linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.08) 0px,
+        rgba(255, 255, 255, 0.08) 6px,
+        transparent 6px,
+        transparent 12px
+    );
+    opacity: 0.6;
+}
+

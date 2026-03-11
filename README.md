@@ -29,3 +29,46 @@ Los resultados se guardan en los estados correspondientes para que estén dispon
 ### Funcion renderView
 
 * Centralizar la lógica de navegación y renderizado de vistas, asegurando que solo se muestre la sección adecuada según el estado de la app y los permisos del usuario.
+
+### Funcionamiento K-Means
+Obtención de datos
+
+Consulta la base de datos para obtener reportes recientes con ubicación válida dentro de un rango de días.
+
+Procesamiento de ubicaciones
+
+Convierte la ubicación almacenada como "lat, lng" en coordenadas numéricas.
+
+Cálculo de peso del reporte
+
+Cada reporte recibe un peso heurístico según:
+
+tipo de problema (fuga, electricidad, basura, etc.)
+
+estado del reporte
+
+qué tan reciente es
+
+Aplicación del algoritmo K-Means
+
+Agrupa los reportes en k clusters geográficos según cercanía entre coordenadas.
+
+Recalculo de centroides
+
+Los centroides de cada cluster se recalculan varias veces considerando el peso de los reportes.
+
+Generación de estadísticas
+
+Para cada cluster se calculan:
+
+tipo de problema dominante
+
+estado dominante
+
+radio aproximado de influencia
+
+cantidad de reportes
+
+Respuesta al cliente
+
+Devuelve los clusters ordenados por importancia o peso total, para generar el heatmap en el mapa.

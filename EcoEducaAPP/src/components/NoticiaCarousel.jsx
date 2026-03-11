@@ -63,54 +63,32 @@ const NoticiaCarousel = ({ noticias }) => {
   };
 
   return (
-    <div className="relative w-full max-w-6xl mx-auto">
-      {/* Carrusel principal */}
+    <div className="relative w-full mx-auto">
       <motion.div
-        className="relative bg-gradient-to-r from-gray-50 to-white rounded-2xl overflow-hidden"
-        style={{ minHeight: "400px" }}
+        className="relative bg-gradient-to-r from-gray-50 to-white rounded-2xl overflow-hidden min-h-[420px] md:min-h-[520px]"
       >
-        {/* Patrón de fondo decorativo */}
-        <div className="absolute inset-0 opacity-5 pointer-events-none">
-          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="diagonal-lines" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-                <line x1="0" y1="0" x2="20" y2="20" stroke="currentColor" strokeWidth="1" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#diagonal-lines)" />
-          </svg>
-        </div>
+        <div className="absolute inset-0 pointer-events-none" style={{background: 'linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(245,245,245,0.6) 60%, rgba(240,240,240,0.9) 100%)'}}></div>
 
-        {/* Ilustración decorativa derecha */}
         <motion.div
           className="absolute right-8 top-1/2 transform -translate-y-1/2 opacity-40 pointer-events-none"
           animate={{ y: [0, 10, 0] }}
           transition={{ duration: 4, repeat: Infinity }}
         >
           <svg width="200" height="200" viewBox="0 0 200 200" fill="none">
-            {/* Planta */}
             <g>
-              {/* Tallo */}
               <path d="M100 150 Q95 120, 98 90" stroke="#22c55e" strokeWidth="2" fill="none" />
-              {/* Hoja izquierda grande */}
               <ellipse cx="75" cy="80" rx="20" ry="35" fill="#16a34a" opacity="0.8" transform="rotate(-45 75 80)" />
-              {/* Hoja izquierda pequeña */}
               <ellipse cx="65" cy="110" rx="15" ry="25" fill="#22c55e" opacity="0.7" transform="rotate(-30 65 110)" />
-              {/* Hoja derecha grande */}
               <ellipse cx="125" cy="85" rx="20" ry="35" fill="#16a34a" opacity="0.8" transform="rotate(45 125 85)" />
-              {/* Hoja derecha pequeña */}
               <ellipse cx="135" cy="115" rx="15" ry="25" fill="#22c55e" opacity="0.7" transform="rotate(30 135 115)" />
-              {/* Hoja superior */}
               <ellipse cx="100" cy="60" rx="12" ry="20" fill="#10b981" opacity="0.9" />
             </g>
           </svg>
         </motion.div>
 
         <div className="relative z-10 flex items-stretch">
-          {/* Contenido principal */}
           <div className="flex-1 p-8 md:p-12 flex flex-col justify-between">
             <div>
-              {/* Badge de categoría */}
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -122,7 +100,6 @@ const NoticiaCarousel = ({ noticias }) => {
                 </span>
               </motion.div>
 
-              {/* Título principal */}
               <AnimatePresence mode="wait">
                 <motion.h2
                   key={currentIndex}
@@ -136,7 +113,6 @@ const NoticiaCarousel = ({ noticias }) => {
                 </motion.h2>
               </AnimatePresence>
 
-              {/* Descripción */}
               <AnimatePresence mode="wait">
                 <motion.p
                   key={`desc-${currentIndex}`}
@@ -151,7 +127,6 @@ const NoticiaCarousel = ({ noticias }) => {
               </AnimatePresence>
             </div>
 
-            {/* Controles navegación inferior */}
             <div className="flex items-center justify-between mt-8">
               <div className="flex gap-4">
                 <motion.button
@@ -181,7 +156,6 @@ const NoticiaCarousel = ({ noticias }) => {
             </div>
           </div>
 
-          {/* Información derecha - Fecha */}
           <div className="hidden lg:flex items-start p-8 text-right">
             <motion.div
               initial={{ opacity: 0, x: 20 }}
@@ -199,22 +173,19 @@ const NoticiaCarousel = ({ noticias }) => {
           </div>
         </div>
 
-        {/* Barra inferior decorativa (tierra) */}
-        <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-b from-transparent to-amber-800/20 pointer-events-none">
-          <svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 1000 80" className="opacity-30">
+        <div className="absolute bottom-0 left-0 right-0 h-24 pointer-events-none">
+          <svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 1000 120">
             <defs>
-              <pattern id="soil" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-                <circle cx="10" cy="10" r="2" fill="#78350f" />
-                <circle cx="30" cy="20" r="1.5" fill="#92400e" />
-                <circle cx="20" cy="35" r="1" fill="#b45309" />
-              </pattern>
+              <linearGradient id="soilGrad" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor="#8B5A2B" />
+                <stop offset="100%" stopColor="#6B4423" />
+              </linearGradient>
             </defs>
-            <rect width="1000" height="80" fill="url(#soil)" />
+            <path d="M0,60 C120,20 240,80 360,40 C480,0 600,90 720,50 C840,10 920,70 1000,40 L1000,120 L0,120 Z" fill="url(#soilGrad)" />
           </svg>
         </div>
       </motion.div>
 
-      {/* Indicadores de puntos */}
       <div className="flex gap-3 justify-center mt-8">
         {noticias.map((_, index) => (
           <motion.button
@@ -234,7 +205,6 @@ const NoticiaCarousel = ({ noticias }) => {
         ))}
       </div>
 
-      {/* Fecha móvil */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

@@ -258,9 +258,8 @@ const CalendarioView = ({ data }) => {
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 view-transition">
-                {/* CALENDARIO - 3/4 */}
                 <div className="lg:col-span-3 bg-white rounded-2xl shadow-2xl p-6 border-t-4 border-green-500">
-                    {/* Header con navegación */}
+                   
                     <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4 pb-4 border-b-2 border-gray-100">
                         <div className="flex gap-2">
                             <button onClick={viewMode === 'month' ? prevMonth : prevWeek} 

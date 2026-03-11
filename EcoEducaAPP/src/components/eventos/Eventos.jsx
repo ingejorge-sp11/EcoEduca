@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowLeft, Calendar, MapPin, Clock } from 'lucide-react';
+import './eventos.css';
 
 /**
  * COMPONENTE: EventosView
@@ -7,14 +8,11 @@ import { ArrowLeft, Calendar, MapPin, Clock } from 'lucide-react';
  * Permite seleccionar un evento para ver sus detalles.
  */
 const EventosView = ({ data, onSelectEvento }) => (
-    <section className="relative bg-gradient-to-b from-green-100 to-green-50 min-h-screen overflow-hidden py-12">
-        {/* Fondo decorativo */}
+    <section className="relative bg-gray-50 min-h-screen overflow-hidden py-12">
         <div className="absolute inset-0 opacity-5">
-            {/* Decoración de fondo */}
         </div>
 
         <div className="relative container mx-auto px-4">
-            {/* Título con diseño EcoJuego */}
             <div className="mb-12 text-white rounded-lg shadow-lg p-4 relative overflow-hidden" style={{ backgroundColor: '#9DBFA5' }}>
                 {/* Hojas cayendo : ANIMACION*/}
                 <div className="absolute inset-0 pointer-events-none">
@@ -42,9 +40,11 @@ const EventosView = ({ data, onSelectEvento }) => (
                             className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 cursor-pointer"
                         >
                             {/* diseño de la tarjeta de eventos */}
-                            <div className="h-16 bg-gradient-to-r from-green-600 to-green-500 flex items-center justify-center border-b-4 border-white">
+                            <div className="h-16 bg-gradient-to-r from-emerald-700 to-emerald-600 flex items-center justify-center border-b-4 border-white">
                                 <div className="text-2xl">🌿</div>
                             </div>
+                            {/* Franja de tierra simulada */}
+                            <div className="soil-strip" />
                             
                             {/* Contenido de la tarjeta de eventos */}
                             <div className="p-3">
@@ -85,7 +85,7 @@ const EventosView = ({ data, onSelectEvento }) => (
 );
 //Redireccion a la vista de detalles de eventos
 const EventoDetallesView = ({ evento, onBack }) => (
-    <section className="bg-gradient-to-b from-green-50 to-white min-h-screen py-12">
+    <section className="bg-gray-50 min-h-screen py-12">
         <div className="container mx-auto px-4 max-w-2xl">
             {/* Botón Atrás */}
             <button
@@ -99,9 +99,10 @@ const EventoDetallesView = ({ evento, onBack }) => (
             {/* Card Principal */}
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
                 {/* Header con color */}
-                <div className="h-24 bg-gradient-to-r from-green-600 to-green-500 flex items-center justify-center">
+                <div className="h-24 bg-gradient-to-r from-emerald-700 to-emerald-600 flex items-center justify-center">
                     <div className="text-4xl">🌿</div>
                 </div>
+                <div className="soil-strip" />
 
                 {/* Contenido */}
                 <div className="p-8">

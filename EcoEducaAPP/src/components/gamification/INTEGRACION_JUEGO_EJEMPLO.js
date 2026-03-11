@@ -1,17 +1,7 @@
-/**
- * 📝 EJEMPLO: Cómo Integrar Guardado de Puntos en JuegoResiduos.jsx
- * 
- * Este archivo muestra dónde y cómo agregar el código para guardar puntos
- * después de que el usuario complete una ronda del juego.
- */
-
-// ============================================================================
-// PASO 1: AGREGAR ESTA FUNCIÓN al componente JuegoResiduos
-// ============================================================================
 
 const guardarPuntosEnServidor = async (puntosGanados) => {
   const token = localStorage.getItem('token');
-  const userIdLocal = localStorage.getItem('userId'); // O usar userId del state
+  const userIdLocal = localStorage.getItem('userId'); 
 
   if (!userIdLocal || !token) {
     console.error('Usuario no autenticado');
@@ -48,10 +38,6 @@ const guardarPuntosEnServidor = async (puntosGanados) => {
   }
 };
 
-// ============================================================================
-// PASO 2: LLAMAR ESTA FUNCIÓN cuando el usuario completa el juego
-// ============================================================================
-
 // OPCIÓN A: Si tienes un botón "Terminar Juego"
 const handleTerminarJuego = async () => {
   // Guardar puntos antes de terminar
@@ -72,9 +58,6 @@ const handleTerminarJuego = async () => {
   setGameOver(true);
 };
 
-// ============================================================================
-// OPCIÓN B: Si el juego termina automáticamente después de cierto tiempo
-// ============================================================================
 
 // Agregar useEffect que monitoree el estado del juego
 useEffect(() => {
@@ -88,9 +71,6 @@ useEffect(() => {
   }
 }, [gameOver, puntajeFinal]);
 
-// ============================================================================
-// OPCIÓN C: Guardar después de cada acción correcta (más frecuente)
-// ============================================================================
 
 const manejarRespuestaCorrecta = async (puntos) => {
   const nuevoPuntaje = puntaje + puntos;
@@ -105,11 +85,6 @@ const manejarRespuestaCorrecta = async (puntos) => {
   }
 };
 
-// ============================================================================
-// PASO 3: AGREGAR BOTÓN EN LA INTERFAZ (si no existe)
-// ============================================================================
-
-{/* Agregar esto en el JSX del componente */}
 {gameOver && (
   <div className="game-over-screen">
     <h2>Juego Terminado</h2>
@@ -125,40 +100,6 @@ const manejarRespuestaCorrecta = async (puntos) => {
   </div>
 )}
 
-// ============================================================================
-// PASO 4: FLUJO COMPLETO (Ejemplo)
-// ============================================================================
-
-/**
- * Flujo completo de ejecución:
- * 
- * 1. Usuario está en GamificationDashboard
- *    └─ Clic en "Ir al Juego de Residuos"
- *       └─ Se abre JuegoResiduos.jsx
- *
- * 2. Usuario juega
- *    ├─ Arrastra objetos a contenedores
- *    ├─ Respuestas correctas = +10 puntos (state local)
- *    └─ Cada respuesta correcta llama manejarRespuestaCorrecta()
- *       └─ guardarPuntosEnServidor(nuevoPuntaje)
- *          └─ POST /api/usuario/{id}/puntos
- *             └─ Backend actualiza usuario.puntuacion
- *
- * 3. Usuario termina el juego
- *    └─ Clic en "Volver a Misiones"
- *       └─ window.location.href = '/misiones'
- *
- * 4. GamificationDashboard recarga
- *    ├─ useEffect se ejecuta
- *    ├─ GET /api/usuario/{id}
- *    ├─ Obtiene puntuacion actualizada (ahora 110 en lugar de 50)
- *    └─ MisionesDiarias se re-renderiza con nuevo valor
- *       └─ Barra de progreso avanza automáticamente
- */
-
-// ============================================================================
-// PASO 5: MANEJO DE ERRORES (Importante)
-// ============================================================================
 
 const guardarPuntosConReintentos = async (puntosGanados, intentos = 3) => {
   for (let i = 1; i <= intentos; i++) {
@@ -195,9 +136,6 @@ const guardarPuntosConReintentos = async (puntosGanados, intentos = 3) => {
   }
 };
 
-// ============================================================================
-// STEP 6: VERIFICACIÓN Y FEEDBACK AL USUARIO
-// ============================================================================
 
 const handleGuardarYVolver = async () => {
   // Mostrar cargando
@@ -223,18 +161,5 @@ const handleGuardarYVolver = async () => {
   }
 };
 
-// ============================================================================
-// RESUMEN
-// ============================================================================
-
-/**
- * Tres líneas principales de código a agregar:
- * 
- * 1. Función guardarPuntosEnServidor()
- * 2. Llamada a esta función cuando el juego termina
- * 3. Redirigir a /misiones después
- * 
- * Eso es todo lo necesario para que el sistema de Misiones funcione
- */
 
 export { guardarPuntosEnServidor, guardarPuntosConReintentos };

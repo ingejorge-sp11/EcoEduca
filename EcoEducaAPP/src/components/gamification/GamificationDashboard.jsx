@@ -3,34 +3,68 @@ import { motion } from "framer-motion";
 import { Zap, Target } from "lucide-react";
 import MisionesDiarias from "./MisionesDiarias";
 import Leaderboard from "./Leaderboard";
+import { obtenerTopActividadesUsuario } from "../../utils/userActivityRecommender";
 
 const GamificationDashboard = ({ user }) => {
   const [tabActiva, setTabActiva] = useState("resumen");
-  const [puntosUsuario, setPuntosUsuario] = useState(user?.puntuacion || 0);
+  const [puntosUsuario, setPuntosUsuario] = useState(0);
 
-  // Obtener puntos del usuario desde la API
+  // Obtener puntos acumulados solo desde las misiones (localStorage)
   useEffect(() => {
-    if (user?.id) {
-      const cargarPuntos = async () => {
-        try {
-          const res = await fetch(`http://localhost:3001/api/usuarios/${user.id}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-          });
-          const data = await res.json();
-          if (data.puntuacion !== undefined) {
-            setPuntosUsuario(data.puntuacion);
-          }
-        } catch (error) {
-          console.error("Error al cargar puntos:", error);
-          setPuntosUsuario(user?.puntuacion || 0);
+    const actualizarPuntos = () => {
+      try {
+        if (typeof window === "undefined" || !window.localStorage) {
+          setPuntosUsuario(0);
+          return;
         }
-      };
-      cargarPuntos();
+        const key = user && user.id ? `misiones_diarias_${user.id}` : "misiones_diarias";
+        const progreso = JSON.parse(window.localStorage.getItem(key)) || {};
+        setPuntosUsuario(Number(progreso.puntos_totales || 0));
+      } catch (e) {
+        setPuntosUsuario(0);
+      }
+    };
+
+    actualizarPuntos();
+
+    const handler = () => actualizarPuntos();
+    if (typeof window !== "undefined") {
+      window.addEventListener("ecoedu:puntos-misiones-actualizados", handler);
     }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("ecoedu:puntos-misiones-actualizados", handler);
+      }
+    };
   }, [user]);
 
-  // ...existing code...
-  // ...existing code...
+  const topActividades = obtenerTopActividadesUsuario(3);
+  const nombresAmigables = {
+    "juego-residuos": "Juego de residuos",
+    "juego-reciclaje-animado": "Juego de reciclaje",
+    "mapa": "Mapa",
+    "calendario": "Calendario",
+    "eventos": "Eventos",
+    "reportes": "Reportes",
+  };
+  const descripcionesActividad = {
+    "juego-residuos": "Juego de reciclaje: acumula puntos para cumplir misiones.",
+    "juego-reciclaje-animado": "Juego de reciclaje: acumula puntos para cumplir misiones.",
+    "eventos": "Conoce más acerca de eventos de CUCEI para el medio ambiente.",
+    "calendario": "Explora días festivos o eventos importantes.",
+    "mapa": "Conoce incidentes de tu alrededor.",
+    "reportes": "Reporta incidentes que ayuden a la comunidad.",
+  };
+
+  const irASeccion = (seccion) => {
+    try {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("ecoedu:navigate", { detail: seccion }));
+      }
+    } catch (e) {
+      
+    }
+  };
 
   const tabs = [
     {
@@ -49,7 +83,7 @@ const GamificationDashboard = ({ user }) => {
       id: "tablero",
       nombre: "Tablero",
       icono: <span role="img" aria-label="tablero">🏆</span>,
-      component: <div style={{padding: '2rem', textAlign: 'center', color: '#888'}}>Aquí se mostrará el tablero</div>,
+      component: <Leaderboard user={user} />,
     },
   ];
 
@@ -146,7 +180,9 @@ const GamificationDashboard = ({ user }) => {
             {tabs.map((tab) => (
               <motion.button
                 key={tab.id}
-                onClick={() => setTabActiva(tab.id)}
+                onClick={() => {
+                  setTabActiva(tab.id);
+                }}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className={`flex items-center gap-2 px-6 py-3 rounded-t-lg font-semibold transition-all whitespace-nowrap ${
@@ -169,7 +205,53 @@ const GamificationDashboard = ({ user }) => {
           transition={{ duration: 0.3 }}
           className="bg-white rounded-lg p-6 shadow-lg"
         >
-          {tabs.find((tab) => tab.id === tabActiva)?.component}
+          {tabActiva === "resumen" ? (
+            topActividades.length > 0 ? (
+              <div>
+                <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-4">
+                  Basado en tus interacciones, esto podría interesarte
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {topActividades.map((actividad, index) => {
+                    const nombre = nombresAmigables[actividad.seccion] || actividad.seccion;
+                    const descripcion = descripcionesActividad[actividad.seccion] || "Explora esta sección para seguir participando.";
+                    return (
+                      <motion.button
+                        key={actividad.seccion + index}
+                        onClick={() => irASeccion(actividad.seccion)}
+                        whileHover={{ scale: 1.03, y: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="relative w-full h-32 text-left overflow-hidden rounded-2xl bg-gradient-to-br from-green-50 via-emerald-50 to-sky-100 border border-emerald-200 shadow-sm hover:shadow-xl transition-all duration-200 flex flex-col justify-between p-4 group"
+                      >
+                        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none bg-gradient-to-br from-emerald-100/40 to-transparent" />
+                        <div className="relative z-10 flex flex-col h-full justify-between">
+                          <div className="flex items-center gap-3 mb-1">
+                            <motion.span
+                              className="text-3xl"
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                            >
+                              🌍
+                            </motion.span>
+                            <span className="block text-base font-bold text-gray-900 leading-snug">{nombre}</span>
+                          </div>
+                          <span className="text-xs text-gray-700">
+                            {descripcion}
+                          </span>
+                        </div>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-600">
+                Aún no tenemos suficientes datos de tu comportamiento para mostrar recomendaciones.
+              </p>
+            )
+          ) : (
+            tabs.find((tab) => tab.id === tabActiva)?.component
+          )}
         </motion.div>
       </div>
     </div>

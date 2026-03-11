@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { TreePine, Calendar, MapPin, LogIn, UserPlus, X, Menu, Ticket, User, LogOut, Zap, AlertTriangle, Send, Shield, CheckCircle, Clock, Plus, Trash2, LayoutDashboard, Newspaper, Gamepad2, Map } from 'lucide-react';
 import JuegosSection from "./components/JuegosSection";
+import AdminPanel from "./components/admin/AdminPanel";
 import JuegoResiduos from "./components/JuegoResiduos";
 import CalendarioView from "./components/calendario/Calendario";
 import { EventosView, EventoDetallesView } from "./components/eventos/Eventos";
@@ -9,8 +10,12 @@ import NoticiaCarousel from "./components/NoticiaCarousel";
 import GamificationDashboard from "./components/gamification/GamificationDashboard";
 import '../css/carousel-noticias.css';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents} from 'react-leaflet'
+import JuegoReciclajeAnimado from "./components/juegos/JuegoReciclajeAnimado";
+import { registrarActividadUsuario, limpiarActividadUsuario } from "./utils/userActivityRecommender";
+// import JuegoReciclajeKonva from "./components/juegos/JuegoReciclajeKonva";
+// import JuegoReciclajePixi from "./components/juegos/JuegoReciclajePixi";
 
-const API_URL = 'http://localhost:3001/api';
+const API_URL = 'http://localhost:3002/api';
 
 //BARRA DE NAVEGACION (ICONOS)
 const Header = ({ user, onLogout, onLoginClick, onRegisterClick, onNavigate }) => {
@@ -46,6 +51,12 @@ const Header = ({ user, onLogout, onLoginClick, onRegisterClick, onNavigate }) =
                             <span>{link.text}</span>
                         </button>
                     ))}
+                    {user && user.rol === 'admin' && (
+                        <button onClick={() => onNavigate('admin')} className="flex items-center space-x-2 text-blue-600 hover:text-blue-800 transition-colors font-semibold">
+                            <Shield className="h-5 w-5" />
+                            <span>Admin</span>
+                        </button>
+                    )}
                 </nav>
 
                 {/* Botones login/usuario */}
@@ -94,6 +105,13 @@ const Header = ({ user, onLogout, onLoginClick, onRegisterClick, onNavigate }) =
                                 <span>{link.text}</span>
                             </button>
                         ))}
+                        {user && user.rol === 'admin' && (
+                            <button onClick={() => { onNavigate('admin'); setIsMenuOpen(false); }}
+                                className="flex items-center space-x-2 text-blue-600 hover:text-blue-800 transition-colors text-lg font-semibold">
+                                <Shield className="h-5 w-5" />
+                                <span>Panel Admin</span>
+                            </button>
+                        )}
                     </nav>
                     {/* Autenticacion mobile */}
                     <div className="flex flex-col space-y-3 mt-4 pt-4 border-t">
@@ -274,13 +292,44 @@ const HeroSection = () => (
  */
 const MapaView = () => {
     const [puntos, setPuntos] = useState([]);
+    const [reportes, setReportes] = useState([]);
     const [mapKey] = useState(Date.now());
-    useEffect(() => { fetch(`${API_URL}/mapa`).then(r=>r.json()).then(setPuntos).catch(console.error); }, []);
+    useEffect(() => {
+        fetch(`${API_URL}/mapa`).then(r=>r.json()).then(setPuntos).catch(console.error);
+        fetch(`${API_URL}/reportes`).then(r=>r.json()).then(setReportes).catch(console.error);
+    }, []);
+    // Helper para parsear ubicacion "lat,long"
+    const parseUbicacion = (ubicacion) => {
+        if (!ubicacion) return null;
+        const parts = ubicacion.split(',').map(s => s.trim());
+        if (parts.length !== 2) return null;
+        const lat = parseFloat(parts[0]);
+        const lng = parseFloat(parts[1]);
+        if (isNaN(lat) || isNaN(lng)) return null;
+        return [lat, lng];
+    };
     return (
         <div className="h-[80vh] w-full relative z-0 bg-transparent">
             <MapContainer key={mapKey} center={[20.6555, -103.3255]} zoom={16} style={{height:'100%',width:'100%'}}>
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
-                {puntos.map(p => <Marker key={p.id} position={[p.latitud, p.longitud]}><Popup><b>{p.nombre}</b><br/>{p.descripcion}<br/><span className="badge bg-green-100">{p.categoria}</span></Popup></Marker>)}
+                {/* Puntos normales */}
+                {puntos.map(p => (
+                    <Marker key={p.id} position={[p.latitud, p.longitud]}>
+                        <Popup><b>{p.nombre}</b><br/>{p.descripcion}<br/><span className="badge bg-green-100">{p.categoria}</span></Popup>
+                    </Marker>
+                ))}
+                {/* Reportes como pines rojos */}
+                {reportes.map(r => {
+                    const pos = parseUbicacion(r.ubicacion);
+                    if (!pos) return null;
+                    return (
+                        <Marker key={"reporte-"+r.id} position={pos} icon={L.icon({iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png', iconSize: [25,41], iconAnchor: [12,41], popupAnchor: [1,-34], shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.4/images/marker-shadow.png', shadowSize: [41,41]})}>
+                            <Popup>
+                                <b>{r.titulo}</b><br/>{r.descripcion}<br/><span className="badge bg-red-100">Reporte: {r.tipo}</span>
+                            </Popup>
+                        </Marker>
+                    );
+                })}
             </MapContainer>
         </div>
     );
@@ -305,6 +354,13 @@ const ReportesView = ({ user, onLoginRequerido }) => {
             if(res.ok) {
                 setMsg({txt:'Reporte enviado', type:'success'});
                 setForm({ titulo: '', tipo: 'fuga', ubicacion: '', descripcion: '' });
+                // Marcar misión de reporte como completada en localStorage y sumar puntos
+                let progreso = JSON.parse(localStorage.getItem('misiones_diarias')) || {};
+                if (!progreso.reporte) {
+                  progreso.reporte = true;
+                  progreso.puntos_totales = (progreso.puntos_totales || 0) + 30; // 30 puntos por la misión
+                  localStorage.setItem('misiones_diarias', JSON.stringify(progreso));
+                }
             } else {
                 setMsg({txt:'Error', type:'error'});
             }
@@ -390,6 +446,7 @@ function App() {
         // Cargar usuario guardado en localStorage
         const savedUser = localStorage.getItem("user");
         if (savedUser) setUser(JSON.parse(savedUser));
+        // Cargar tema guardado
 
         // Cargar datos de API
         const fetchData = async () => {
@@ -408,6 +465,21 @@ function App() {
             }
         };
         fetchData();
+    }, []);
+
+    // Refrescar novedades automáticamente cuando el admin cambia visibilidad/crea/edita/elimina
+    useEffect(() => {
+        const refreshNovedades = async () => {
+            try {
+                const res = await fetch(`${API_URL}/novedades`);
+                if (res.ok) setNovedades(await res.json());
+            } catch (error) {
+                console.warn('No se pudo refrescar novedades:', error);
+            }
+        };
+        const handler = () => refreshNovedades();
+        window.addEventListener('ecoedu:novedades-updated', handler);
+        return () => window.removeEventListener('ecoedu:novedades-updated', handler);
     }, []);
 
      // EFECTO: Ajuste de mapa 
@@ -450,6 +522,7 @@ function App() {
         setUser(null);
         localStorage.removeItem("user");
         localStorage.removeItem("token");
+        limpiarActividadUsuario();
     };
 
     /**
@@ -481,6 +554,32 @@ function App() {
         setIsRegisterOpen(false);
     };
 
+    // Registrar solo ciertas vistas como actividad del usuario
+    const seccionesRastreadas = ['juego-residuos', 'juego-reciclaje-animado', 'mapa', 'calendario', 'eventos', 'reportes'];
+
+    const registrarVista = (view) => {
+        if (seccionesRastreadas.includes(view)) {
+            registrarActividadUsuario(view);
+        }
+    };
+
+    const handleNavigate = (view) => {
+        setCurrentView(view);
+        registrarVista(view);
+    };
+
+    // Escuchar navegaciones desde otros componentes (por ejemplo, recomendaciones)
+    useEffect(() => {
+        const handler = (event) => {
+            const view = event.detail;
+            if (typeof view === 'string') {
+                handleNavigate(view);
+            }
+        };
+        window.addEventListener('ecoedu:navigate', handler);
+        return () => window.removeEventListener('ecoedu:navigate', handler);
+    }, []);
+
     /**
      * FUNCIÓN: renderView
      * Renderiza la vista actual según la navegación
@@ -488,8 +587,20 @@ function App() {
      */
     const renderView = () => {
         switch (currentView) {
+
+                        case 'juego-reciclaje-animado':
+                            return user ? (
+                                <JuegoReciclajeAnimado />
+                            ) : (
+                                <div className="p-8 text-center">
+                                    <h2 className="text-2xl font-bold mb-4"> Debes iniciar sesión primero</h2>
+                                    <button onClick={openLoginModal} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                                        Iniciar Sesión
+                                    </button>
+                                </div>
+                            );
             case 'evento-detalles':
-                return <EventoDetallesView evento={selectedEvento} onBack={() => setCurrentView('eventos')} />;
+                return <EventoDetallesView evento={selectedEvento} onBack={() => handleNavigate('eventos')} />;
             case 'eventos':
                 return <EventosView data={eventos} onSelectEvento={(evento) => {
                     setSelectedEvento(evento);
@@ -524,20 +635,29 @@ function App() {
                     </div>
                 );
 
+            case 'admin':
+                return user && user.rol === 'admin' ? (
+                    <AdminPanel />
+                ) : (
+                    <div className="p-8 text-center">
+                        <h2 className="text-2xl font-bold mb-4">Acceso denegado</h2>
+                        <p className="text-gray-600">Esta sección es exclusiva para administradores.</p>
+                    </div>
+                );
+
             case 'inicio':
             default:
                 return (
                     <>
                         <HeroSection />
                         {novedades.length > 0 && (
-                            <section className="py-16 bg-white">
-                                <div className="container mx-auto px-4">
-                                    <h3 className="text-2xl md:text-3xl font-bold text-center text-gray-800 mb-8">Novedades y Noticias</h3>
+                            <section className="py-8 md:py-14 bg-white">
+                                <div className="max-w-7xl mx-auto px-4">
                                     <NoticiaCarousel noticias={novedades} />
                                 </div>
                             </section>
                         )}
-                        <JuegosSection onSelectJuego={setCurrentView} />
+                        <JuegosSection onSelectJuego={handleNavigate} />
                     </>
                 );
         }
@@ -550,7 +670,7 @@ function App() {
                 onLogout={handleLogout}
                 onLoginClick={openLoginModal}
                 onRegisterClick={openRegisterModal}
-                onNavigate={setCurrentView}
+                onNavigate={handleNavigate}
             />
             <main>
                 {renderView()}
