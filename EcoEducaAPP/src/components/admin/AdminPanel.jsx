@@ -4,7 +4,8 @@ import { MapContainer, TileLayer, Circle, CircleMarker, Marker, Popup, useMap } 
 import L from 'leaflet';
 import 'leaflet.heat';
 
-const API_URL = 'http://localhost:3002/api';
+// Usamos ruta relativa para que pase por el proxy /api de Vite
+const API_URL = '/api';
 
 export default function AdminPanel() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -900,8 +901,10 @@ export default function AdminPanel() {
                         }
 
                         const severityColor = getClusterColor(cluster.score || 0);
-                        // Radio más moderado para que los círculos no se vean tan grandes
-                        const radius = 250 + (cluster.count || 1) * 60;
+                        // Radio ajustado para CUCEI: puntos muy cercanos, círculos más pequeños
+                        const baseRadius = 60; // metros
+                        const radiusPerReporte = 15; // metros extra por reporte en el cluster
+                        const radius = baseRadius + (cluster.count || 1) * radiusPerReporte;
                         return (
                           <React.Fragment key={cluster.id}>
                             <Circle

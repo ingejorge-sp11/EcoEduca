@@ -15,7 +15,8 @@ import { registrarActividadUsuario, limpiarActividadUsuario } from "./utils/user
 // import JuegoReciclajeKonva from "./components/juegos/JuegoReciclajeKonva";
 // import JuegoReciclajePixi from "./components/juegos/JuegoReciclajePixi";
 
-const API_URL = 'http://localhost:3002/api';
+// Usamos ruta relativa para que Vite la proxy hacia el backend en localhost:3002
+const API_URL = '/api';
 
 //BARRA DE NAVEGACION (ICONOS)
 const Header = ({ user, onLogout, onLoginClick, onRegisterClick, onNavigate }) => {
@@ -308,13 +309,30 @@ const MapaView = () => {
         if (isNaN(lat) || isNaN(lng)) return null;
         return [lat, lng];
     };
+
+    // Icono verde único para todos los puntos del mapa (puntos_mapa)
+    const baseMarker = {
+        iconSize: [30, 45],
+        iconAnchor: [15, 45],
+        popupAnchor: [1, -34],
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.4/images/marker-shadow.png',
+        shadowSize: [41, 41]
+    };
+
+    const iconPuntoVerde = L.icon({
+        ...baseMarker,
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png'
+    });
+
+    const getPuntoIcon = () => iconPuntoVerde;
+
     return (
         <div className="h-[80vh] w-full relative z-0 bg-transparent">
             <MapContainer key={mapKey} center={[20.6555, -103.3255]} zoom={16} style={{height:'100%',width:'100%'}}>
                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
                 {/* Puntos normales */}
                 {puntos.map(p => (
-                    <Marker key={p.id} position={[p.latitud, p.longitud]}>
+                    <Marker key={p.id} position={[p.latitud, p.longitud]} icon={getPuntoIcon()}>
                         <Popup><b>{p.nombre}</b><br/>{p.descripcion}<br/><span className="badge bg-green-100">{p.categoria}</span></Popup>
                     </Marker>
                 ))}

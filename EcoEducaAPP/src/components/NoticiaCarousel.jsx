@@ -70,18 +70,25 @@ const NoticiaCarousel = ({ noticias }) => {
         <div className="absolute inset-0 pointer-events-none" style={{background: 'linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(245,245,245,0.6) 60%, rgba(240,240,240,0.9) 100%)'}}></div>
 
         <motion.div
-          className="absolute right-8 top-1/2 transform -translate-y-1/2 opacity-40 pointer-events-none"
+          className="absolute right-6 top-1/2 transform -translate-y-1/2 opacity-70 pointer-events-none"
           animate={{ y: [0, 10, 0] }}
           transition={{ duration: 4, repeat: Infinity }}
         >
-          <svg width="200" height="200" viewBox="0 0 200 200" fill="none">
+          <svg width="260" height="260" viewBox="0 0 200 200" fill="none">
             <g>
-              <path d="M100 150 Q95 120, 98 90" stroke="#22c55e" strokeWidth="2" fill="none" />
-              <ellipse cx="75" cy="80" rx="20" ry="35" fill="#16a34a" opacity="0.8" transform="rotate(-45 75 80)" />
-              <ellipse cx="65" cy="110" rx="15" ry="25" fill="#22c55e" opacity="0.7" transform="rotate(-30 65 110)" />
-              <ellipse cx="125" cy="85" rx="20" ry="35" fill="#16a34a" opacity="0.8" transform="rotate(45 125 85)" />
-              <ellipse cx="135" cy="115" rx="15" ry="25" fill="#22c55e" opacity="0.7" transform="rotate(30 135 115)" />
-              <ellipse cx="100" cy="60" rx="12" ry="20" fill="#10b981" opacity="0.9" />
+              {/* tall stem */}
+              <path d="M100 170 Q98 130, 100 80" stroke="#166534" strokeWidth="4" fill="none" />
+
+              {/* left big leaf */}
+              <ellipse cx="65" cy="80" rx="32" ry="48" fill="#22c55e" opacity="0.95" transform="rotate(-20 65 80)" />
+              <path d="M45 75 Q65 90, 85 70" stroke="#16a34a" strokeWidth="2" fill="none" opacity="0.9" />
+
+              {/* right big leaf */}
+              <ellipse cx="135" cy="78" rx="32" ry="48" fill="#16a34a" opacity="0.95" transform="rotate(20 135 78)" />
+              <path d="M115 70 Q135 90, 155 75" stroke="#15803d" strokeWidth="2" fill="none" opacity="0.9" />
+
+              {/* small top leaf */}
+              <ellipse cx="100" cy="55" rx="18" ry="30" fill="#22c55e" opacity="1" />
             </g>
           </svg>
         </motion.div>

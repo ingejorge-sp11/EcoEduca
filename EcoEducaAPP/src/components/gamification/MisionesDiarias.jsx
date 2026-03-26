@@ -96,29 +96,36 @@ const MisionesDiarias = ({ user, puntosActuales }) => {
     // Sumar puntos automáticamente si alguna misión completada no está sumada
     let puntosTotales = progreso.puntos_totales || 0;
     let actualizados = false;
+    let incrementoGlobal = 0;
     if (misionesHoy[0].completada && (!progreso._sumado_reporte)) {
       puntosTotales += misionesHoy[0].puntos;
+      incrementoGlobal += misionesHoy[0].puntos;
       progreso._sumado_reporte = true;
       actualizados = true;
     }
     if (misionesHoy[1].completada && (!progreso._sumado_residuos)) {
       puntosTotales += misionesHoy[1].puntos;
+      incrementoGlobal += misionesHoy[1].puntos;
       progreso._sumado_residuos = true;
       actualizados = true;
     }
     if (misionesHoy[2].completada && (!progreso._sumado_reciclaje)) {
       puntosTotales += misionesHoy[2].puntos;
+      incrementoGlobal += misionesHoy[2].puntos;
       progreso._sumado_reciclaje = true;
       actualizados = true;
     }
     if (misionesHoy[3].completada && (!progreso._sumado_basura)) {
       puntosTotales += misionesHoy[3].puntos;
+      incrementoGlobal += misionesHoy[3].puntos;
       progreso._sumado_basura = true;
       actualizados = true;
     }
     if (actualizados) {
       progreso.puntos_totales = puntosTotales;
       localStorage.setItem(getProgresoKey(), JSON.stringify(progreso));
+
+      // Notificar solo al frontend (versión original sin sincronizar con backend nivel)
       try {
         window.dispatchEvent(new Event('ecoedu:puntos-misiones-actualizados'));
       } catch (e) {

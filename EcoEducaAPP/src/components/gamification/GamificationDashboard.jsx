@@ -2,41 +2,77 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Zap, Target } from "lucide-react";
 import MisionesDiarias from "./MisionesDiarias";
+import MisionesTemporada from "./MisionesTemporada";
 import Leaderboard from "./Leaderboard";
 import { obtenerTopActividadesUsuario } from "../../utils/userActivityRecommender";
+
+function calcularNivelPorPuntos(puntos) {
+  if (puntos >= 700) return "Legendario";
+  if (puntos >= 500) return "Maestro";
+  if (puntos >= 400) return "Experto";
+  if (puntos >= 300) return "Intermedio";
+  if (puntos >= 200) return "Aprendiz";
+  return "Novato";
+}
+
+function obtenerIconoNivel(nivelTexto) {
+  // Asociación ecológica de nivel → icono y etiqueta
+  switch (nivelTexto) {
+    case "Novato":
+      return { emoji: "🌱", label: "Semilla" };
+    case "Aprendiz":
+      return { emoji: "🌿", label: "Brote" };
+    case "Intermedio":
+      return { emoji: "🌳", label: "Árbol joven" };
+    case "Experto":
+      return { emoji: "🌲", label: "Guardián del bosque" };
+    case "Maestro":
+    case "Legendario":
+      return { emoji: "🌍", label: "Protector del planeta" };
+    default:
+      return { emoji: "🌱", label: "Semilla" };
+  }
+}
 
 const GamificationDashboard = ({ user }) => {
   const [tabActiva, setTabActiva] = useState("resumen");
   const [puntosUsuario, setPuntosUsuario] = useState(0);
-
-  // Obtener puntos acumulados solo desde las misiones (localStorage)
+  // Obtener puntos acumulados desde localStorage (versión original basada en cliente)
   useEffect(() => {
-    const actualizarPuntos = () => {
+    if (typeof window === "undefined") {
+      setPuntosUsuario(0);
+      return;
+    }
+
+    const cargarDesdeLocalStorage = () => {
+      if (!user || !user.id) {
+        setPuntosUsuario(0);
+        return;
+      }
+      const key = `misiones_diarias_${user.id}`;
       try {
-        if (typeof window === "undefined" || !window.localStorage) {
-          setPuntosUsuario(0);
-          return;
-        }
-        const key = user && user.id ? `misiones_diarias_${user.id}` : "misiones_diarias";
         const progreso = JSON.parse(window.localStorage.getItem(key)) || {};
-        setPuntosUsuario(Number(progreso.puntos_totales || 0));
-      } catch (e) {
+        const puntos = Number(progreso.puntos_totales || 0);
+        setPuntosUsuario(isNaN(puntos) ? 0 : puntos);
+      } catch {
         setPuntosUsuario(0);
       }
     };
 
-    actualizarPuntos();
+    cargarDesdeLocalStorage();
 
-    const handler = () => actualizarPuntos();
-    if (typeof window !== "undefined") {
-      window.addEventListener("ecoedu:puntos-misiones-actualizados", handler);
-    }
+    const handler = () => cargarDesdeLocalStorage();
+    window.addEventListener("ecoedu:puntos-misiones-actualizados", handler);
+    window.addEventListener("storage", handler);
+
     return () => {
-      if (typeof window !== "undefined") {
-        window.removeEventListener("ecoedu:puntos-misiones-actualizados", handler);
-      }
+      window.removeEventListener("ecoedu:puntos-misiones-actualizados", handler);
+      window.removeEventListener("storage", handler);
     };
   }, [user]);
+
+  const nivelUsuario = calcularNivelPorPuntos(puntosUsuario);
+  const iconoNivel = obtenerIconoNivel(nivelUsuario);
 
   const topActividades = obtenerTopActividadesUsuario(3);
   const nombresAmigables = {
@@ -80,6 +116,14 @@ const GamificationDashboard = ({ user }) => {
       component: <MisionesDiarias user={user} puntosActuales={puntosUsuario} />,
     },
     {
+      id: "temporada",
+      nombre: "Temporada",
+      icono: <span role="img" aria-label="temporada">
+        ⏳
+      </span>,
+      component: <MisionesTemporada user={user} />,
+    },
+    {
       id: "tablero",
       nombre: "Tablero",
       icono: <span role="img" aria-label="tablero">🏆</span>,
@@ -120,7 +164,9 @@ const GamificationDashboard = ({ user }) => {
               >
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-5xl">⭐</span>
-                  <Zap className="text-yellow-600" size={32} />
+                  <span title={iconoNivel.label} className="text-3xl">
+                    {iconoNivel.emoji}
+                  </span>
                 </div>
                 <p className="text-sm text-gray-700 font-medium mb-2">
                   Tus Puntos Actuales
@@ -128,8 +174,8 @@ const GamificationDashboard = ({ user }) => {
                 <p className="text-6xl font-black text-yellow-600">
                   {puntosUsuario}
                 </p>
-                <p className="text-xs text-gray-600 mt-4">
-                  Puntos ganados completando misiones
+                <p className="text-sm text-gray-700 mt-2 font-semibold">
+                  Nivel: {nivelUsuario}
                 </p>
               </motion.div>
 
@@ -174,27 +220,29 @@ const GamificationDashboard = ({ user }) => {
           </motion.div>
         )}
 
-        {/* Tabs */}
+        {/* Tabs (scroll horizontal en móvil) */}
         <div className="mb-8">
-          <div className="flex gap-2 border-b-2 border-gray-300 pb-0">
-            {tabs.map((tab) => (
-              <motion.button
-                key={tab.id}
-                onClick={() => {
-                  setTabActiva(tab.id);
-                }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className={`flex items-center gap-2 px-6 py-3 rounded-t-lg font-semibold transition-all whitespace-nowrap ${
-                  tabActiva === tab.id
-                    ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                {tab.icono}
-                {tab.nombre}
-              </motion.button>
-            ))}
+          <div className="border-b-2 border-gray-300 pb-0 overflow-x-auto">
+            <div className="flex gap-2 min-w-max">
+              {tabs.map((tab) => (
+                <motion.button
+                  key={tab.id}
+                  onClick={() => {
+                    setTabActiva(tab.id);
+                  }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-t-lg font-semibold transition-all whitespace-nowrap ${
+                    tabActiva === tab.id
+                      ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  {tab.icono}
+                  {tab.nombre}
+                </motion.button>
+              ))}
+            </div>
           </div>
         </div>
 

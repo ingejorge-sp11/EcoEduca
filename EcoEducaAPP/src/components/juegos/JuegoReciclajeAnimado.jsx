@@ -1,6 +1,4 @@
 
-
-
 import React, { useState } from 'react';
 
 const residuos = [
@@ -97,6 +95,7 @@ export default function JuegoReciclajeAnimado() {
   const [highScore, setHighScore] = useState(null);
   const [userId, setUserId] = useState(null);
   const [errorUsuario, setErrorUsuario] = useState(null);
+  const [procesosMezclados, setProcesosMezclados] = useState(() => [...residuos[0].procesos]);
 
   // Función para obtener el best score actualizado
   const fetchBestScore = async () => {
@@ -115,7 +114,7 @@ export default function JuegoReciclajeAnimado() {
     }
     try {
       // Intentar primero el endpoint estable /v1/users/profile
-      const resProfile = await fetch('http://localhost:3002/api/v1/users/profile', {
+      const resProfile = await fetch('/api/v1/users/profile', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (resProfile.ok) {
@@ -125,7 +124,7 @@ export default function JuegoReciclajeAnimado() {
         setErrorUsuario(null);
       } else {
         // Fallback a /usuarios/me si el perfil falla
-        const resMe = await fetch('http://localhost:3002/api/usuarios/me', {
+        const resMe = await fetch('/api/usuarios/me', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (resMe.ok) {
@@ -148,7 +147,7 @@ export default function JuegoReciclajeAnimado() {
     const token = localStorage.getItem('token');
     if (!token) return;
     try {
-      const response = await fetch('http://localhost:3002/api/usuarios/me/guardar-mejor-puntaje-segundo', {
+      const response = await fetch('/api/usuarios/me/guardar-mejor-puntaje-segundo', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -171,6 +170,15 @@ export default function JuegoReciclajeAnimado() {
   }, []);
 
   const residuo = residuos[indice];
+
+  // Mezclar el orden de los procesos para que la respuesta correcta
+  // no aparezca siempre en la misma posición
+  React.useEffect(() => {
+    if (!residuos.length) return;
+    const copiaProcesos = [...residuo.procesos];
+    copiaProcesos.sort(() => Math.random() - 0.5);
+    setProcesosMezclados(copiaProcesos);
+  }, [indice, residuo, residuos]);
 
   const handleProceso = async (proceso) => {
     setAcierto(proceso.correcto);
@@ -246,7 +254,7 @@ export default function JuegoReciclajeAnimado() {
           <h3 className="font-bold text-lg mb-2 text-green-800">{residuo.nombre}</h3>
           <p className="mb-4 text-center font-medium">¿Qué proceso se realiza en la planta?</p>
           <div className="flex flex-wrap gap-3 mb-4">
-            {residuo.procesos.map((proceso, i) => (
+            {procesosMezclados.map((proceso, i) => (
               <button
                 key={i}
                 className={`px-4 py-2 rounded font-bold border transition-colors ${acierto === null ? 'bg-gray-100 hover:bg-green-200' : proceso.correcto ? 'bg-green-500 text-white' : 'bg-red-300 text-white'}`}

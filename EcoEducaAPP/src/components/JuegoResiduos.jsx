@@ -6,7 +6,7 @@ import huevo from '../assets/objetos/huevo.png';
 import paisaje2 from '../assets/paisaje2.0.jpg';
 
 export default function JuegoResiduos() {
-    const [consejo, setConsejo] = useState("");
+	const [consejo, setConsejo] = useState("");
   const [puntaje, setPuntaje] = useState(0);
   const [mejorPuntuacion, setMejorPuntuacion] = useState(0);
   const [gameOver, setGameOver] = useState(false);
@@ -17,13 +17,35 @@ export default function JuegoResiduos() {
   const [cargando, setCargando] = useState(true);
   const [tiempoRestante, setTiempoRestante] = useState(60); 
   const [timerActive, setTimerActive] = useState(false);
+  const [objetoSeleccionado, setObjetoSeleccionado] = useState(null);
 
   const objetos = [
-    { nombre: "Cáscara de plátano", categoria: "organico", imagen: banana },
-    { nombre: "Restos de manzana", categoria: "organico", imagen: manzana },
-    { nombre: "Cáscara de naranja", categoria: "organico", imagen: naranja },
-    { nombre: "Cáscara de huevo", categoria: "organico", imagen: huevo },
-  ];
+  { nombre: "Cáscara de banana", categoria: "organico", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/banana.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9iYW5hbmEucG5nIiwiaWF0IjoxNzczNjI5MzQ5LCJleHAiOjE4MDUxNjUzNDl9.lARSju3dAJHVvHt4km-uq-USWsd0hFMIU0ahWWvIKsk" },
+  { nombre: "Bolsa de té", categoria: "organico", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/bolsate.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9ib2xzYXRlLnBuZyIsImlhdCI6MTc3MzYyOTM5NywiZXhwIjoxODA1MTY1Mzk3fQ.wDWV341rLxqmYkWHD4fskGaVig38ITqoe1pI1Pk46QY" },
+  { nombre: "Cáscara de nuez", categoria: "organico", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/cascara%20nuez.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9jYXNjYXJhIG51ZXoucG5nIiwiaWF0IjoxNzczNjI5NTE5LCJleHAiOjE4MDUxNjU1MTl9.uApfDT1ezjamN-pP12zruoESzWvHWZIwbTc4r1pQipw" },
+  { nombre: "Hueso roto", categoria: "organico", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/hueso_roto.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9odWVzb19yb3RvLnBuZyIsImlhdCI6MTc3MzYyOTU1OCwiZXhwIjoxODA1MTY1NTU4fQ.3_mS5hUf1sr86bUuHEfzSYjXOOUZFnEZVYu3WVmsoMs" },
+  { nombre: "Cáscara de huevo", categoria: "organico", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/huevo.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9odWV2by5wbmciLCJpYXQiOjE3NzM2Mjk1NjksImV4cCI6MTgwNTE2NTU2OX0.AUTBEQiRY8q70pBEPmCnDpnlArK5MEseJwP3ep14ks0" },
+  { nombre: "Restos de manzana", categoria: "organico", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/manzana.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9tYW56YW5hLnBuZyIsImlhdCI6MTc3MzYyOTU4MywiZXhwIjoxODA1MTY1NTgzfQ.wsSPTxznrTVpShch4MzuUrZnidkmXKfp6BD9WsjKITQ" },
+  { nombre: "Cáscara de naranja", categoria: "organico", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/naranja.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9uYXJhbmphLnBuZyIsImlhdCI6MTc3MzYyOTU5NCwiZXhwIjoxODA1MTY1NTk0fQ.XQMXPiZ_6YYWhmMAZgHD9hsj1sZnSqGE-rALl_c6DuA" },
+  { nombre: "Pozo de café", categoria: "organico", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/pozo%20de%20cafe.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9wb3pvIGRlIGNhZmUucG5nIiwiaWF0IjoxNzczNjI5NjM2LCJleHAiOjE4MDUxNjU2MzZ9.mRhi1umEawH2s8_XSe1VaZCdhFXON7Tjwwyr2GWk8iY" },
+  { nombre: "Bolsa de papas", categoria: "vidrio", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/bolsa%20de%20papas.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9ib2xzYSBkZSBwYXBhcy5wbmciLCJpYXQiOjE3NzM2MjkzODUsImV4cCI6MTgwNTE2NTM4NX0.rDvT8JJmTgsgfUgRe6H-7oInIKYnRH2c5RIGy43ur9o" },
+  { nombre: "Botella de aceite", categoria: "vidrio", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/botella%20de%20aceite.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9ib3RlbGxhIGRlIGFjZWl0ZS5wbmciLCJpYXQiOjE3NzM2Mjk0MjgsImV4cCI6MTgwNTE2NTQyOH0.96IXt4WWrYLyRQfi_BY0016oumydhQJ8pdRpCYOa5Eg" },
+  { nombre: "Botella de agua", categoria: "vidrio", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/botella%20de%20agua.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9ib3RlbGxhIGRlIGFndWEucG5nIiwiaWF0IjoxNzczNjI5NDQyLCJleHAiOjE4MDUxNjU0NDJ9.0HkuEjwV-VnvohiUECimQ3irPzDhP7iu-W_sep0X-3I" },
+  { nombre: "Botella rota", categoria: "vidrio", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/Botella%20rota.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9Cb3RlbGxhIHJvdGEucG5nIiwiaWF0IjoxNzczNjI5NDU0LCJleHAiOjE4MDUxNjU0NTR9.USBMHVxeLpU4FzXLxZAoCmYwXRh4bvzP1UPzXz3dsOg" },
+  { nombre: "Cartas", categoria: "reciclable", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/cartas.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9jYXJ0YXMucG5nIiwiaWF0IjoxNzczNjI5NDk2LCJleHAiOjE4MDUxNjU0OTZ9.3oHlAN-Y_4tPwVloG4SWkD95c_StuFKjkpdeJ9WA5KY" },
+  { nombre: "Periódico", categoria: "reciclable", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/periodico.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9wZXJpb2RpY28ucG5nIiwiaWF0IjoxNzczNjI5NjEwLCJleHAiOjE4MDUxNjU2MTB9.pkaKygfp29IjQ-gbzTURNYYycO4RPO0R5fmx2mYxVys" },
+  { nombre: "Aceite de motor usado", categoria: "peligroso", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/aceite%20de%20motor%20usado.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9hY2VpdGUgZGUgbW90b3IgdXNhZG8ucG5nIiwiaWF0IjoxNzczNjI5MzM1LCJleHAiOjE4MDUxNjUzMzV9.dACD8mNmCaY-3jx3UwKeB0iYT8ORueJsqZHQ8Uq5yqE" },
+  { nombre: "Bombilla de bajo consumo", categoria: "peligroso", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/Bombilla%20de%20bajo%20consumo.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9Cb21iaWxsYSBkZSBiYWpvIGNvbnN1bW8ucG5nIiwiaWF0IjoxNzczNjI5NDA5LCJleHAiOjE4MDUxNjU0MDl9.fabcYsS3wDZl59ZDTwEioFukI8TdqxyLsW9vA1clq54" },
+  { nombre: "Cartucho de tinta", categoria: "peligroso", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/Cartucho%20de%20tinta.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9DYXJ0dWNobyBkZSB0aW50YS5wbmciLCJpYXQiOjE3NzM2Mjk1MDcsImV4cCI6MTgwNTE2NTUwN30.C3qOlPzqkmt0wgdNSw-undzcMUZNy5RtmIDJJZ-u4PY" },
+  { nombre: "Pila alcalina usada", categoria: "peligroso", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/Pila%20alcalina%20usada.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9QaWxhIGFsY2FsaW5hIHVzYWRhLnBuZyIsImlhdCI6MTc3MzYyOTYyMSwiZXhwIjoxODA1MTY1NjIxfQ.HhdnLqzncjwdejCNJSixrTOTxJPuydLgawRpzQAAb_I" },
+  { nombre: "Spray de insecticida", categoria: "peligroso", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/Spray%20de%20incecticida.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9TcHJheSBkZSBpbmNlY3RpY2lkYS5wbmciLCJpYXQiOjE3NzM2Mjk2NTgsImV4cCI6MTgwNTE2NTY1OH0.sNku9I4kBn16chppGvZy6RfUvDWwbreZN0s10262u5E" },
+  { nombre: "Termómetro de mercurio", categoria: "peligroso", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/Termometro%20de%20mercurio.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9UZXJtb21ldHJvIGRlIG1lcmN1cmlvLnBuZyIsImlhdCI6MTc3MzYyOTY3MSwiZXhwIjoxODA1MTY1NjcxfQ.GmBV9NoRkZ3MUJIUnjrz84s0Izh0MZR-fTYXTX5zyM4" },
+  { nombre: "Bolígrafo usado", categoria: "no_reciclable", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/Boligrafo%20usado.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9Cb2xpZ3JhZm8gdXNhZG8ucG5nIiwiaWF0IjoxNzczNjI5MzY2LCJleHAiOjE4MDUxNjUzNjZ9.Xo8Xe1LSsICN1fSpp_gnBxEZMCUcJlbVa8NRB6SdJyE" },
+  { nombre: "Camisa vieja", categoria: "no_reciclable", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/Camisa%20vieja.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9DYW1pc2EgdmllamEucG5nIiwiaWF0IjoxNzczNjI5NDY1LCJleHAiOjE4MDUxNjU0NjV9.--OVsv21XDz-WrQe3MJayO6GdC_8-8KbgbJXZd4vX-o" },
+  { nombre: "Chicle masticado", categoria: "no_reciclable", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/Chicle%20masticado.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9DaGljbGUgbWFzdGljYWRvLnBuZyIsImlhdCI6MTc3MzYyOTUzMiwiZXhwIjoxODA1MTY1NTMyfQ.oPHDF_yXJNy6gzOdfKuSccveYVcDC7rzbzCTNPWitio" },
+  { nombre: "Colilla de cigarro", categoria: "no_reciclable", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/Colilla%20de%20cigarro.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9Db2xpbGxhIGRlIGNpZ2Fycm8ucG5nIiwiaWF0IjoxNzczNjI5NTQ0LCJleHAiOjE4MDUxNjU1NDR9.O8gcEZMHvzkYeBDypl9ALupEFiPS2CxTghIMTGn2S1I" },
+  { nombre: "Ropa usada", categoria: "no_reciclable", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/Ropa%20usada.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9Sb3BhIHVzYWRhLnBuZyIsImlhdCI6MTc3MzYyOTY0NywiZXhwIjoxODA1MTY1NjQ3fQ.8cBvce6PpjzfSRPOhc-KkKh5ckCn2aYdYYlqk9x5CMc" }
+];
 
   const contenedoresConfig = {
     organico: { emoji: "🍃", color: "#7CAB70", label: "ORGÁNICO" },
@@ -61,7 +83,7 @@ export default function JuegoResiduos() {
       if (token) {
         try {
           // Intentar primero el endpoint estable /v1/users/profile
-          const profileResponse = await fetch('http://localhost:3002/api/v1/users/profile', {
+          const profileResponse = await fetch('/api/v1/users/profile', {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           if (profileResponse.ok) {
@@ -69,9 +91,9 @@ export default function JuegoResiduos() {
             // console.debug('Perfil /v1/users/profile:', profile);
             setUserId(prev => prev ?? profile.id);
             setMejorPuntuacion(profile.puntuacion || 0);
-          } else {
+            } else {
             // Fallback a /usuarios/me solo si el perfil falla
-            const userResponse = await fetch('http://localhost:3002/api/usuarios/me', {
+            const userResponse = await fetch('/api/usuarios/me', {
               headers: { 'Authorization': `Bearer ${token}` }
             });
             if (userResponse.ok) {
@@ -100,7 +122,7 @@ export default function JuegoResiduos() {
   // Obtener consejo cuando termina el juego
   useEffect(() => {
     if (gameOver) {
-      fetch('http://localhost:3002/api/consejo-aleatorio')
+      fetch('/api/consejo-aleatorio')
         .then(res => res.json())
         .then(data => setConsejo(data.descripcion || ""))
         .catch(() => setConsejo(""));
@@ -140,15 +162,9 @@ export default function JuegoResiduos() {
     return () => clearInterval(interval);
   }, [timerActive, gameOver, puntaje]);
 
-  const handleDrop = (e, categoria) => {
-    e.preventDefault();
-    if (gameOver || objetosEnPantalla.length === 0) return;
-
-    const data = e.dataTransfer.getData("text");
-    if (!data) return;
-
-    const objetoActual = JSON.parse(data);
-
+  // Lógica central de clasificación (usada por drag & drop y por taps en móvil)
+  const resolverClasificacion = (objetoActual, categoria) => {
+    if (!objetoActual) return;
     if (objetoActual.categoria === categoria) {
       // ACIERTO
       setPuntaje((prev) => prev + 10);
@@ -182,12 +198,31 @@ export default function JuegoResiduos() {
     }
   };
 
+  const handleDrop = (e, categoria) => {
+    e.preventDefault();
+    if (gameOver || objetosEnPantalla.length === 0) return;
+
+    const data = e.dataTransfer.getData("text");
+    if (!data) return;
+
+    const objetoActual = JSON.parse(data);
+    resolverClasificacion(objetoActual, categoria);
+  };
+
+  // Soporte para móvil: tocar objeto y luego tocar contenedor
+  const handleContainerClick = (categoria) => {
+    if (gameOver || objetosEnPantalla.length === 0) return;
+    if (!objetoSeleccionado) return;
+    resolverClasificacion(objetoSeleccionado, categoria);
+    setObjetoSeleccionado(null);
+  };
+
   const guardarPuntaje = async (puntos) => {
     const token = localStorage.getItem('token');
     if (!token) return;
 
     try {
-      const response = await fetch('http://localhost:3002/api/usuarios/me/guardar-mejor-puntaje', {
+      const response = await fetch('/api/usuarios/me/guardar-mejor-puntaje', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -268,13 +303,14 @@ export default function JuegoResiduos() {
               backgroundImage: `url(${paisaje2})`,
             }}
           >
-            {/* Contenedores en la parte inferior */}
-            <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-2 z-20 px-3">
+            {/* Contenedores en la parte inferior (scroll horizontal en móvil) */}
+            <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-2 z-20 px-3 overflow-x-auto">
               {Object.entries(contenedoresConfig).map(([id, config]) => (
                 <div
                   key={id}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => handleDrop(e, id)}
+                  onClick={() => handleContainerClick(id)}
                   className="group cursor-pointer flex-1 max-w-xs"
                 >
                   {/* Bote de basura */}
@@ -321,7 +357,12 @@ export default function JuegoResiduos() {
                     e.dataTransfer.effectAllowed = "move";
                     e.dataTransfer.setData("text", JSON.stringify(objeto));
                   }}
-                  className="absolute w-24 h-24 cursor-grab active:cursor-grabbing hover:scale-125 transition-transform"
+                  onClick={() => setObjetoSeleccionado(objeto)}
+                  className={`absolute w-24 h-24 md:w-32 md:h-32 cursor-grab active:cursor-grabbing hover:scale-125 transition-transform ${
+                    objetoSeleccionado && objetoSeleccionado.id === objeto.id
+                      ? "ring-4 ring-yellow-400"
+                      : ""
+                  }`}
                   style={{
                     left: `${objeto.posX}%`,
                     top: `${objeto.posY}%`,

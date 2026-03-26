@@ -14,7 +14,7 @@ const Leaderboard = ({ user }) => {
     const fetchTopUsuarios = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch("http://localhost:3002/api/v1/leaderboard/top6", {
+        const res = await fetch("/api/v1/leaderboard/top6", {
           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
         if (!res.ok) throw new Error("No se pudo conectar con el servidor");

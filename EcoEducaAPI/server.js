@@ -5,43 +5,77 @@ import bcrypt from 'bcrypt'; // Librería para cifrar/hashear contraseñas
 import jwt from 'jsonwebtoken';//autenticación basada en tokens
 import cors from 'cors'; //Middleware que habilita CORS
 import axios from 'axios'; //peticiones a otros servicios/APIs externas
+import dns from 'dns';
+import { supabase } from './supabaseClient.js';
+
+dns.setDefaultResultOrder('ipv4first');
 
 // Cargar las variables de entorno desde el archivo .env
 dotenv.config();
 
+// Clave secreta para firmar y verificar JWT
+const jwtSecret = process.env.JWT_SECRET || 'dev_jwt_secret_change_me';
+
 // Configuración de JWT y puntos
-const jwtSecret = process.env.JWT_SECRET || 'mi_secreto_temporal';
 const PUNTOS_POR_ACIERTO = Number(process.env.PUNTOS_POR_ACIERTO) || 10; //Define una constante de puntos por acierto para el sistema de gamificación.
 
 // Inicializar la aplicación de Express
 const app = express();
 const port = 3002;
 
-// Middlewares
 app.use(cors()); // Habilita CORS para permitir peticiones desde el frontend
 app.use(express.json()); // Permite al servidor entender JSON en las peticiones
 
-// Configuración de la conexión a la base de datos PostgreSQL
+// Configuración de la conexión a la base de datos PostgreSQL 
 const pool = new pg.Pool({
   user: process.env.DB_USER,
   host: process.env.DB_HOST,
   database: process.env.DB_DATABASE,
   password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
+  port: process.env.DB_PORT
 });
 
-// Verificamos la conexión a la base de datos al iniciar
+// Verificamos la conexión a la base de datos al iniciar (no bloqueante)
 pool.connect((err, client, release) => {
   if (err) {
-    return console.error('Error al conectar con la base de datos:', err.stack);
+    console.error('Error al conectar con la base de datos PostgreSQL (pool):', err.stack);
+    return;
   }
-  client.query('SELECT NOW()', (err, result) => {
+  client.query('SELECT NOW()', (err) => {
     release();
     if (err) {
-      return console.error('Error ejecutando la consulta de prueba', err.stack);
+      console.error('Error ejecutando la consulta de prueba en PostgreSQL:', err.stack);
+    } else {
+      console.log('¡Conexión exitosa a la base de datos PostgreSQL!');
     }
-    console.log('¡Conexión exitosa a la base de datos PostgreSQL!');
   });
+});
+
+// Endpoint de prueba para verificar conexión con Supabase vía REST
+app.get('/api/supabase/health', async (req, res) => {
+  try {
+    if (!supabase) {
+      return res.status(500).json({
+        ok: false,
+        message: 'Supabase no está configurado. Revisa SUPABASE_URL y claves en .env.'
+      });
+    }
+
+    const { data, error } = await supabase
+      .from('usuarios')
+      .select('id')
+      .limit(1);
+
+    if (error) {
+      console.error('Error al consultar Supabase:', error.message);
+      return res.status(500).json({ ok: false, message: 'Error al consultar Supabase', error: error.message });
+    }
+
+    return res.json({ ok: true, message: 'Conexión a Supabase OK', sample: data });
+  } catch (e) {
+    console.error('Error en /api/supabase/health:', e);
+    res.status(500).json({ ok: false, message: 'Error interno al consultar Supabase', error: String(e?.message || e) });
+  }
 });
 
 app.use((req, res, next) => {
@@ -83,42 +117,40 @@ app.get('/api/usuarios/:id', async (req, res) => {
   }
 });
 
-// Tabla de posiciones, obtiene la puntuacion combinada de ambos juegos y los ordena descendentemente, limitando al top 6
+// Tabla de posiciones, obtiene la puntuacion combinada de ambos juegos y los ordena descendentemente, limitando al top 6 (Supabase)
 //Despues de eso, te dice cual es la posicion que ocupa el usuario 
 app.get('/api/v1/leaderboard/top6', authenticateToken, async (req, res) => {
   try {
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
+
     const userId = req.user?.id;
-    const topQuery = `
-      SELECT 
-        id,
-        nombre,
-        COALESCE(puntuacion, 0) AS puntuacion,
-        COALESCE(puntuacion_segundo, 0) AS puntuacion_segundo,
-        COALESCE(puntuacion, 0) + COALESCE(puntuacion_segundo, 0) AS total
-      FROM usuarios
-      ORDER BY total DESC
-      LIMIT 6
-    `;
-    const topRes = await pool.query(topQuery);
 
-    // Datos y ranking del usuario actual
-    const userRankQuery = `
-      SELECT * FROM (
-        SELECT 
-          id,
-          nombre,
-          COALESCE(puntuacion, 0) AS puntuacion,
-          COALESCE(puntuacion_segundo, 0) AS puntuacion_segundo,
-          COALESCE(puntuacion, 0) + COALESCE(puntuacion_segundo, 0) AS total,
-          RANK() OVER (ORDER BY COALESCE(puntuacion, 0) + COALESCE(puntuacion_segundo, 0) DESC) AS rank
-        FROM usuarios
-      ) t WHERE id = $1
-    `;
-    const userRes = await pool.query(userRankQuery, [userId]);
+    const { data: usuarios, error } = await supabase
+      .from('usuarios')
+      .select('id, nombre, puntuacion, puntuacion_segundo');
 
-    const currentUser = userRes.rows.length ? userRes.rows[0] : null;
+    if (error) {
+      console.error('Error al obtener usuarios para leaderboard (Supabase):', error.message);
+      return res.status(500).json({ message: 'Error al obtener leaderboard' });
+    }
 
-    res.json({ top: topRes.rows, currentUser });
+    const lista = (usuarios || []).map(u => ({
+      id: u.id,
+      nombre: u.nombre,
+      puntuacion: u.puntuacion || 0,
+      puntuacion_segundo: u.puntuacion_segundo || 0,
+      total: (u.puntuacion || 0) + (u.puntuacion_segundo || 0)
+    }));
+
+    lista.sort((a, b) => b.total - a.total);
+
+    const top = lista.slice(0, 6);
+    const indexUsuario = lista.findIndex(u => u.id === userId);
+    const currentUser = indexUsuario >= 0 ? { ...lista[indexUsuario], rank: indexUsuario + 1 } : null;
+
+    res.json({ top, currentUser });
   } catch (error) {
     console.error('Error al obtener leaderboard combinado:', error);
     res.status(500).json({ message: 'Error al obtener leaderboard' });
@@ -146,26 +178,41 @@ app.post('/api/register', async (req, res) => {
   }
 
   try {
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado en el servidor.' });
+    }
+
     //Se genera un hash y usa bcrypt para encriptar la contraseña
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const newUserQuery = `
-      INSERT INTO usuarios (nombre, apellido, codigo_estudiante, password_hash, puntuacion)
-      VALUES ($1, $2, $3, $4, 0)
-      RETURNING id, nombre, codigo_estudiante, puntuacion;
-    `;
-    const values = [nombre, apellido, codigo, hashedPassword];
+    const { data, error } = await supabase
+      .from('usuarios')
+      .insert([
+        {
+          nombre,
+          apellido,
+          codigo_estudiante: codigo,
+          password_hash: hashedPassword,
+          puntuacion: 0,
+          nivel: 0,
+        }
+      ])
+      .select('id, nombre, codigo_estudiante, puntuacion, nivel')
+      .single();
 
-    const result = await pool.query(newUserQuery, values);
-    const newUser = result.rows[0];
-
-    res.status(201).json({ message: 'Usuario registrado con éxito', user: newUser });
-  } catch (error) {
-    console.error('Error en el registro:', error);
-    if (error.code === '23505') {
-      return res.status(409).json({ message: 'El código de estudiante ya está registrado.' });
+    if (error) {
+      console.error('Error en el registro (Supabase):', error);
+      // 23505 suele ser clave duplicada en Postgres
+      if (error.code === '23505') {
+        return res.status(409).json({ message: 'El código de estudiante ya está registrado.' });
+      }
+      return res.status(500).json({ message: 'Error interno del servidor.' });
     }
+
+    res.status(201).json({ message: 'Usuario registrado con éxito', user: data });
+  } catch (error) {
+    console.error('Error inesperado en el registro:', error);
     res.status(500).json({ message: 'Error interno del servidor.' });
   }
 });
@@ -179,14 +226,24 @@ app.post('/api/login', async (req, res) => {
   }
 
   try {
-    const userQuery = 'SELECT * FROM usuarios WHERE codigo_estudiante = $1';
-    const result = await pool.query(userQuery, [codigo]);
-
-    if (result.rows.length === 0) {
-      return res.status(401).json({ message: 'Código o contraseña incorrectos.' });
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado en el servidor.' });
     }
 
-    const user = result.rows[0];
+    const { data: user, error } = await supabase
+      .from('usuarios')
+      .select('*')
+      .eq('codigo_estudiante', codigo)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error obteniendo usuario en login (Supabase):', error);
+      return res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+
+    if (!user) {
+      return res.status(401).json({ message: 'Código o contraseña incorrectos.' });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
 
@@ -251,80 +308,331 @@ function authenticateToken(req, res, next) {
   });
 }
 
-// Obtener datos del usuario autenticado (incluye puntuacion)
+// Obtener datos del usuario autenticado (incluye puntuacion) usando Supabase
 app.get('/api/v1/users/profile', authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, nombre, codigo_estudiante, puntuacion, puntuacion_segundo FROM usuarios WHERE id = $1', [req.user.id]);
-    if (result.rows.length === 0) return res.status(404).json({ message: 'Usuario no encontrado.' });
-    res.json(result.rows[0]);
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
+
+    let { data, error } = await supabase
+      .from('usuarios')
+      .select('id, nombre, codigo_estudiante, puntuacion, puntuacion_segundo, nivel')
+      .eq('id', req.user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.warn('Error usando nivel en /v1/users/profile, intentando fallback sin nivel:', error.message);
+      const fallback = await supabase
+        .from('usuarios')
+        .select('id, nombre, codigo_estudiante, puntuacion, puntuacion_segundo')
+        .eq('id', req.user.id)
+        .maybeSingle();
+
+      if (fallback.error) {
+        console.error('Error en fallback /v1/users/profile:', fallback.error.message);
+        return res.status(500).json({ message: 'Error interno del servidor.' });
+      }
+      if (!fallback.data) return res.status(404).json({ message: 'Usuario no encontrado.' });
+
+      return res.json({ ...fallback.data, nivel: 0 });
+    }
+    if (!data) return res.status(404).json({ message: 'Usuario no encontrado.' });
+
+    res.json(data);
   } catch (err) {
     console.error('Error al obtener usuario:', err);
     res.status(500).json({ message: 'Error interno del servidor.' });
   }
 });
 
-// GET obtiene lo que el usuario logueado vea su puntuacion en los juegos
- app.get('/api/usuarios/me', authenticateToken, async (req, res) => {
-   try {
-     console.log('--- /api/usuarios/me ---');
-     console.log('req.user:', req.user);
-     if (!req.user || !req.user.id) {
-       console.log('req.user o req.user.id no definido');
-       return res.status(400).json({ message: 'Token sin id de usuario.' });
-     }
-     console.log('Obteniendo usuario con id:', req.user.id);
-    const result = await pool.query('SELECT id, nombre, codigo_estudiante, puntuacion, puntuacion_segundo FROM usuarios WHERE id = $1', [req.user.id]);
-     console.log('Resultado de la consulta:', result.rows);
-     if (result.rows.length === 0) {
-       console.log('Usuario no encontrado en la base de datos');
-       return res.status(404).json({ message: 'Usuario no encontrado.' });
-     }
-     res.json(result.rows[0]);
-   } catch (err) {
-     console.error('Error al obtener usuario:', err);
-     res.status(500).json({ message: 'Error interno del servidor.', error: err.message });
-   }
- });
+// GET obtiene los datos del usuario logueado (incluye nivel acumulado de misiones)
+app.get('/api/usuarios/me', authenticateToken, async (req, res) => {
+  try {
+    console.log('--- /api/usuarios/me ---');
+    console.log('req.user:', req.user);
+    if (!req.user || !req.user.id) {
+      console.log('req.user o req.user.id no definido');
+      return res.status(400).json({ message: 'Token sin id de usuario.' });
+    }
 
-// Lee los puntos de la bd para dibujarlos en el mapa
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
+
+    const { data, error } = await supabase
+      .from('usuarios')
+      .select('*')
+      .eq('id', req.user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error al obtener usuario en /api/usuarios/me (Supabase):', error.message);
+      return res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+
+    if (!data) {
+      console.log('Usuario no encontrado en la base de datos');
+      return res.status(404).json({ message: 'Usuario no encontrado.' });
+    }
+
+    const nivelSeguro = Number(data.nivel || 0);
+    res.json({
+      ...data,
+      nivel: isNaN(nivelSeguro) ? 0 : nivelSeguro,
+    });
+  } catch (err) {
+    console.error('Error al obtener usuario en /api/usuarios/me:', err);
+    res.status(500).json({ message: 'Error interno del servidor.' });
+  }
+});
+
+// Lee los puntos de la bd para dibujarlos en el mapa (Supabase)
 app.get('/api/mapa', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM puntos_mapa');
-    res.json(result.rows);
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
+    const { data, error } = await supabase.from('puntos_mapa').select('*');
+    if (error) {
+      console.error('Error al obtener mapa (Supabase):', error.message);
+      return res.status(500).json({ message: 'Error al obtener mapa' });
+    }
+    res.json(data || []);
   } catch (error) {
     console.error('Error al obtener mapa:', error);
     res.status(500).json({ message: 'Error al obtener mapa' });
   }
 });
 
-// GET  leer todos los reportes desde la BD.
+// Mapa de alias de ubicaciones a coordenadas "lat,lng".
+// Aquí se configuran los módulos de CUCEI: el texto que
+// escriba el usuario (normalizado a minúsculas) se mapea
+// a las coordenadas correspondientes.
+const LOCATION_ALIAS_TO_COORDS = {
+  // Módulo A
+  'modulo a': '20.654078,-103.325756',
+  'edificio a': '20.654078,-103.325756',
+  'a': '20.654078,-103.325756',
+
+  // Módulo B
+  'modulo b': '20.654008,-103.324911',
+  'edificio b': '20.654008,-103.324911',
+  'b': '20.654008,-103.324911',
+
+  // Módulo C
+  'modulo c': '20.654206,-103.325009',
+  'edificio c': '20.654206,-103.325009',
+  'c': '20.654206,-103.325009',
+
+  // Módulo D
+  'modulo d': '20.654482,-103.325288',
+  'edificio d': '20.654482,-103.325288',
+  'd': '20.654482,-103.325288',
+
+  // Módulo E
+  'modulo e': '20.655566,-103.326154',
+  'edificio e': '20.655566,-103.326154',
+  'e': '20.655566,-103.326154',
+
+  // Módulo F
+  'modulo f': '20.655892,-103.325947',
+  'edificio f': '20.655892,-103.325947',
+  'f': '20.655892,-103.325947',
+
+  // Módulo G
+  'modulo g': '20.655901,-103.326994',
+  'edificio g': '20.655901,-103.326994',
+  'g': '20.655901,-103.326994',
+
+  // Módulo H
+  'modulo h': '20.65603,-103.326377',
+  'edificio h': '20.65603,-103.326377',
+  'h': '20.65603,-103.326377',
+
+  // Módulo I
+  'modulo i': '20.656076,-103.325599',
+  'edificio i': '20.656076,-103.325599',
+  'i': '20.656076,-103.325599',
+
+  // Módulo J
+  'modulo j': '20.656223,-103.325931',
+  'edificio j': '20.656223,-103.325931',
+  'j': '20.656223,-103.325931',
+
+  // Módulo K
+  'modulo k': '20.656389,-103.325927',
+  'edificio k': '20.656389,-103.325927',
+  'k': '20.656389,-103.325927',
+
+  // Módulo L
+  'modulo l': '20.6568,-103.325177',
+  'edificio l': '20.6568,-103.325177',
+  'l': '20.6568,-103.325177',
+
+  // Módulo M
+  'modulo m': '20.656632,-103.326352',
+  'edificio m': '20.656632,-103.326352',
+  'm': '20.656632,-103.326352',
+
+  // Módulo N
+  'modulo n': '20.656966,-103.326001',
+  'edificio n': '20.656966,-103.326001',
+  'n': '20.656966,-103.326001',
+
+  // Módulo O
+  'modulo o': '20.657163,-103.326125',
+  'edificio o': '20.657163,-103.326125',
+  'o': '20.657163,-103.326125',
+
+  // Módulo P
+  'modulo p': '20.657356,-103.325111',
+  'edificio p': '20.657356,-103.325111',
+  'p': '20.657356,-103.325111',
+
+  // Módulo Q
+  'modulo q': '20.657621,-103.324778',
+  'edificio q': '20.657621,-103.324778',
+  'q': '20.657621,-103.324778',
+
+  // Módulo R
+  'modulo r': '20.657633,-103.325707',
+  'edificio r': '20.657633,-103.325707',
+  'r': '20.657633,-103.325707',
+
+  // Módulo S
+  'modulo s': '20.657646,-103.326324',
+  'edificio s': '20.657646,-103.326324',
+  's': '20.657646,-103.326324',
+
+  // Módulo T
+  'modulo t': '20.657885,-103.325434',
+  'edificio t': '20.657885,-103.325434',
+  't': '20.657885,-103.325434',
+
+  // Módulo U
+  'modulo u': '20.658117,-103.325266',
+  'edificio u': '20.658117,-103.325266',
+  'u': '20.658117,-103.325266',
+
+  // Módulo V
+  'modulo v': '20.658298,-103.326457',
+  'edificio v': '20.658298,-103.326457',
+  'v': '20.658298,-103.326457',
+
+  // Módulo V2
+  'modulo v2': '20.658126,-103.326021',
+  'edificio v2': '20.658126,-103.326021',
+  'v2': '20.658126,-103.326021',
+
+  // Módulo W
+  'modulo w': '20.658061,-103.327009',
+  'edificio w': '20.658061,-103.327009',
+  'w': '20.658061,-103.327009',
+
+  // Módulo X
+  'modulo x': '20.658278,-103.326799',
+  'edificio x': '20.658278,-103.326799',
+  'x': '20.658278,-103.326799',
+
+  // Módulo Y
+  'modulo y': '20.657205,-103.327172',
+  'edificio y': '20.657205,-103.327172',
+  'y': '20.657205,-103.327172',
+
+  // Módulo Z
+  'modulo z': '20.657387,-103.327804',
+  'edificio z': '20.657387,-103.327804',
+  'z': '20.657387,-103.327804',
+};
+
+// Normaliza la ubicación: si coincide con un alias (por texto),
+// devuelve sus coordenadas; si no, deja el valor tal cual.
+function mapUbicacionToCoords(ubicacionRaw) {
+  if (!ubicacionRaw || typeof ubicacionRaw !== 'string') return ubicacionRaw;
+
+  // Normalizar texto: recortar espacios, pasar a minúsculas
+  // y quitar acentos (módulo -> modulo) para que coincida
+  // aunque el usuario escriba con tildes.
+  const key = ubicacionRaw
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  return LOCATION_ALIAS_TO_COORDS[key] || ubicacionRaw;
+}
+
+// GET  leer todos los reportes desde la BD (Supabase)
 app.get('/api/reportes', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM reportes');
-    res.json(result.rows);
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
+    const { data, error } = await supabase
+      .from('reportes')
+      .select('*')
+      .order('fecha_reporte', { ascending: false });
+
+    if (error) {
+      console.error('Error al obtener reportes (Supabase):', error.message);
+      return res.status(500).json({ message: 'Error al obtener reportes' });
+    }
+
+    res.json(data || []);
   } catch (error) {
     console.error('Error al obtener reportes:', error);
     res.status(500).json({ message: 'Error al obtener reportes' });
   }
 });
-// crear/enviar un nuevo reporte.
+// crear/enviar un nuevo reporte (Supabase)
 app.post('/api/reportes', async (req, res) => {
-    const { usuario_id, titulo, descripcion, tipo, ubicacion } = req.body;
-    try {
-        const result = await pool.query(
-            'INSERT INTO reportes (usuario_id, titulo, descripcion, tipo, ubicacion) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-            [usuario_id, titulo, descripcion, tipo, ubicacion]
-        );
-        res.status(201).json({ message: 'Reporte enviado.' });
-    } catch (e) { res.status(500).json({ message: 'Error al enviar reporte.' }); }
+  const { usuario_id, titulo, descripcion, tipo, ubicacion } = req.body;
+  try {
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
+
+    // Si el usuario escribió un alias como "Modulo P",
+    // lo convertimos a coordenadas definidas en LOCATION_ALIAS_TO_COORDS.
+    const ubicacionProcesada = mapUbicacionToCoords(ubicacion);
+
+    const { error } = await supabase.from('reportes').insert([
+      { usuario_id, titulo, descripcion, tipo, ubicacion: ubicacionProcesada }
+    ]);
+
+    if (error) {
+      console.error('Error al enviar reporte (Supabase):', error.message);
+      return res.status(500).json({ message: 'Error al enviar reporte.' });
+    }
+
+    res.status(201).json({ message: 'Reporte enviado.' });
+  } catch (e) {
+    console.error('Error al enviar reporte:', e);
+    res.status(500).json({ message: 'Error al enviar reporte.' });
+  }
 });
 
-// Obtiene fechas de la absse de datos para ponerlas en el calendario
+// Obtiene fechas de la base de datos para ponerlas en el calendario (Supabase)
 app.get('/api/fechas-importantes', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM fechas_importantes ORDER BY fecha ASC');
-    res.json(result.rows);
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
+
+    const { data, error } = await supabase
+      .from('fechas_importantes')
+      .select('*')
+      .order('fecha', { ascending: true });
+
+    if (error) {
+      console.error('Error al obtener fechas importantes (Supabase):', error.message);
+      return res.status(500).json({ message: 'Error al obtener fechas importantes' });
+    }
+
+    res.json(data || []);
   } catch (error) {
+    console.error('Error al obtener fechas importantes:', error);
     res.status(500).json({ message: 'Error al obtener fechas importantes' });
   }
 });
@@ -333,13 +641,25 @@ app.get('/api/fechas-importantes', async (req, res) => {
 // 1. Estadisticas geenrales de los totales de reportes, susuarios, eventos
 app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
   try {
-    const totalReportes = await pool.query('SELECT COUNT(*) FROM reportes WHERE estado = $1', ['pendiente']);
-    const totalUsuarios = await pool.query('SELECT COUNT(*) FROM usuarios');
-    const totalEventos = await pool.query('SELECT COUNT(*) FROM eventos');
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
+
+    const [{ count: reportesPendientes, error: errRep }, { count: usuariosTotales, error: errUsr }, { count: eventosActivos, error: errEvt }] = await Promise.all([
+      supabase.from('reportes').select('*', { count: 'exact', head: true }).eq('estado', 'pendiente'),
+      supabase.from('usuarios').select('*', { count: 'exact', head: true }),
+      supabase.from('eventos').select('*', { count: 'exact', head: true })
+    ]);
+
+    if (errRep || errUsr || errEvt) {
+      console.error('Error en stats (Supabase):', errRep || errUsr || errEvt);
+      return res.status(500).json({ message: 'Error en stats' });
+    }
+
     res.json({
-      reportesPendientes: totalReportes.rows[0].count,
-      usuariosTotales: totalUsuarios.rows[0].count,
-      eventosActivos: totalEventos.rows[0].count
+      reportesPendientes: reportesPendientes ?? 0,
+      usuariosTotales: usuariosTotales ?? 0,
+      eventosActivos: eventosActivos ?? 0
     });
   } catch (e) { res.status(500).json({ message: 'Error en stats' }); }
 });
@@ -347,60 +667,246 @@ app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
 // 2. Gestión de Reportes
 app.get('/api/admin/reportes', verifyAdmin, async (req, res) => {
   try {
-    const query = `SELECT r.*, u.nombre as autor FROM reportes r JOIN usuarios u ON r.usuario_id = u.id ORDER BY r.fecha_reporte DESC`;
-    const result = await pool.query(query);
-    res.json(result.rows);
-  } catch (e) { res.status(500).json({ message: 'Error obteniendo reportes' }); }
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
+
+    // Traer todos los campos tal como están en la tabla, ordenados por fecha más reciente
+    const { data, error } = await supabase
+      .from('reportes')
+      .select('*')
+      .order('fecha_reporte', { ascending: false });
+
+    if (error) {
+      console.error('Error obteniendo reportes (Supabase admin):', error.message);
+      return res.status(500).json({ message: 'Error obteniendo reportes' });
+    }
+
+    res.json(data || []);
+  } catch (e) {
+    console.error('Error obteniendo reportes (admin):', e);
+    res.status(500).json({ message: 'Error obteniendo reportes' });
+  }
 });
 app.put('/api/admin/reportes/:id', verifyAdmin, async (req, res) => {
   const { id } = req.params;
   const { estado } = req.body;
   try {
-    await pool.query('UPDATE reportes SET estado = $1 WHERE id = $2', [estado, id]);
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
+
+    const { error } = await supabase
+      .from('reportes')
+      .update({ estado })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error actualizando reporte (Supabase admin):', error.message);
+      return res.status(500).json({ message: 'Error actualizando reporte' });
+    }
+
     res.json({ message: 'Estado actualizado' });
-  } catch (e) { res.status(500).json({ message: 'Error actualizando reporte' }); }
+  } catch (e) {
+    console.error('Error actualizando reporte (admin):', e);
+    res.status(500).json({ message: 'Error actualizando reporte' });
+  }
 });
 
 // 3. Gestión de Eventos
 app.post('/api/admin/eventos', verifyAdmin, async (req, res) => {
   const { titulo, descripcion, fecha, hora, ubicacion } = req.body;
   try {
-    await pool.query('INSERT INTO eventos (titulo, descripcion, fecha, hora, ubicacion) VALUES ($1, $2, $3, $4, $5)', [titulo, descripcion, fecha, hora, ubicacion]);
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
+
+    const { error } = await supabase.from('eventos').insert([
+      { titulo, descripcion, fecha, hora, ubicacion }
+    ]);
+
+    if (error) {
+      console.error('Error creando evento (Supabase):', error.message);
+      return res.status(500).json({ message: 'Error creando evento' });
+    }
+
     res.status(201).json({ message: 'Evento creado' });
-  } catch (e) { res.status(500).json({ message: 'Error creando evento' }); }
+  } catch (e) {
+    console.error('Error creando evento (admin):', e);
+    res.status(500).json({ message: 'Error creando evento' });
+  }
+});
+
+app.put('/api/admin/eventos/:id', verifyAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { titulo, descripcion, fecha, hora, ubicacion } = req.body;
+  try {
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
+
+    const { data, error } = await supabase
+      .from('eventos')
+      .update({ titulo, descripcion, fecha, hora, ubicacion })
+      .eq('id', id)
+      .select('*')
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error actualizando evento (Supabase admin):', error.message);
+      return res.status(500).json({ message: 'Error actualizando evento' });
+    }
+
+    if (!data) {
+      return res.status(404).json({ message: 'Evento no encontrado.' });
+    }
+
+    res.json({
+      message: 'Evento actualizado',
+      evento: {
+        id: data.id,
+        titulo: data.titulo,
+        descripcion: data.descripcion,
+        fecha: data.fecha,
+        hora: data.hora,
+        ubicacion: data.ubicacion
+      }
+    });
+  } catch (e) {
+    console.error('Error actualizando evento (admin):', e);
+    res.status(500).json({ message: 'Error actualizando evento' });
+  }
 });
 app.delete('/api/admin/eventos/:id', verifyAdmin, async (req, res) => {
   try {
-    await pool.query('DELETE FROM eventos WHERE id = $1', [req.params.id]);
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
+
+    const { error } = await supabase.from('eventos').delete().eq('id', req.params.id);
+
+    if (error) {
+      console.error('Error eliminando evento (Supabase):', error.message);
+      return res.status(500).json({ message: 'Error eliminando evento' });
+    }
+
     res.json({ message: 'Evento eliminado' });
   } catch (e) { res.status(500).json({ message: 'Error eliminando evento' }); }
 });
 
-// 4. Gestión de Novedades
+// 4. Gestión de Novedades (Supabase)
+function normalizarFechaPublicacion(fechaRaw) {
+  try {
+    if (!fechaRaw) {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    const valor = String(fechaRaw).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(valor)) {
+      return valor;
+    }
+
+    // Formato común en español: DD/MM/YYYY
+    const matchDMY = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(valor);
+    if (matchDMY) {
+      const [, dd, mm, yyyy] = matchDMY;
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    // Intentar parseo genérico
+    const d = new Date(valor);
+    if (!Number.isNaN(d.getTime())) {
+      return d.toISOString().slice(0, 10);
+    }
+
+    // Si todo falla, usar la fecha actual para evitar errores de formato
+    return new Date().toISOString().slice(0, 10);
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
+
 app.post('/api/admin/novedades', verifyAdmin, async (req, res) => {
   const { titulo, resumen, fecha_publicacion } = req.body;
   try {
-    await pool.query('INSERT INTO novedades (titulo, resumen, fecha_publicacion) VALUES ($1, $2, $3)', [titulo, resumen, fecha_publicacion]);
-    res.status(201).json({ message: 'Noticia creada' });
-  } catch (e) { res.status(500).json({ message: 'Error creando noticia' }); }
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
+
+    const fechaIso = normalizarFechaPublicacion(fecha_publicacion);
+
+    const { data, error } = await supabase
+      .from('novedades')
+      .insert([{ titulo, resumen, fecha_publicacion: fechaIso }])
+      .select('id, titulo, resumen, fecha_publicacion, visible')
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error creando noticia (Supabase admin):', error.message, 'detalle:', error.details);
+      return res.status(500).json({ message: 'Error creando noticia', error: error.message });
+    }
+
+    res.status(201).json({ message: 'Noticia creada', novedad: data });
+  } catch (e) {
+    console.error('Error creando noticia (admin):', e);
+    res.status(500).json({ message: 'Error creando noticia' });
+  }
 });
+
 app.put('/api/admin/novedades/:id', verifyAdmin, async (req, res) => {
   const { id } = req.params;
   const { titulo, resumen, fecha_publicacion } = req.body;
   try {
-    const result = await pool.query(
-      'UPDATE novedades SET titulo = $1, resumen = $2, fecha_publicacion = $3 WHERE id = $4 RETURNING id, titulo, resumen, fecha_publicacion, visible',
-      [titulo, resumen, fecha_publicacion, id]
-    );
-    if (result.rowCount === 0) return res.status(404).json({ message: 'Noticia no encontrada.' });
-    res.json({ message: 'Noticia actualizada', novedad: result.rows[0] });
-  } catch (e) { res.status(500).json({ message: 'Error actualizando noticia', error: e.message }); }
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
+
+    const fechaIso = normalizarFechaPublicacion(fecha_publicacion);
+
+    const { data, error } = await supabase
+      .from('novedades')
+      .update({ titulo, resumen, fecha_publicacion: fechaIso })
+      .eq('id', id)
+      .select('id, titulo, resumen, fecha_publicacion, visible')
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error actualizando noticia (Supabase admin):', error.message);
+      return res.status(500).json({ message: 'Error actualizando noticia' });
+    }
+
+    if (!data) {
+      return res.status(404).json({ message: 'Noticia no encontrada.' });
+    }
+
+    res.json({ message: 'Noticia actualizada', novedad: data });
+  } catch (e) {
+    console.error('Error actualizando noticia (admin):', e);
+    res.status(500).json({ message: 'Error actualizando noticia' });
+  }
 });
+
 app.delete('/api/admin/novedades/:id', verifyAdmin, async (req, res) => {
   try {
-    await pool.query('DELETE FROM novedades WHERE id = $1', [req.params.id]);
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
+
+    const { error } = await supabase
+      .from('novedades')
+      .delete()
+      .eq('id', req.params.id);
+
+    if (error) {
+      console.error('Error eliminando noticia (Supabase admin):', error.message);
+      return res.status(500).json({ message: 'Error eliminando noticia' });
+    }
+
     res.json({ message: 'Noticia eliminada' });
-  } catch (e) { res.status(500).json({ message: 'Error eliminando noticia' }); }
+  } catch (e) {
+    console.error('Error eliminando noticia (admin):', e);
+    res.status(500).json({ message: 'Error eliminando noticia' });
+  }
 });
 
 // 5. Verifica que el usuario sea administrador
@@ -408,19 +914,102 @@ app.get('/api/admin/me', verifyAdmin, (req, res) => {
   res.json({ admin: true, user: req.user });
 });
 
-// 5. Gestión de Mapa
+// 5. Gestión de Mapa (Supabase)
 app.post('/api/admin/mapa', verifyAdmin, async (req, res) => {
-    const { nombre, descripcion, latitud, longitud, categoria } = req.body;
-    try {
-        await pool.query('INSERT INTO puntos_mapa (nombre, descripcion, latitud, longitud, categoria) VALUES ($1, $2, $3, $4, $5)', [nombre, descripcion, latitud, longitud, categoria]);
-        res.status(201).json({ message: 'Punto creado' });
-    } catch (e) { res.status(500).json({ message: 'Error creando punto' }); }
+  const { nombre, descripcion, latitud, longitud, categoria } = req.body;
+  try {
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
+
+    const lat = latitud !== undefined ? parseFloat(latitud) : null;
+    const lng = longitud !== undefined ? parseFloat(longitud) : null;
+
+    const { data, error } = await supabase
+      .from('puntos_mapa')
+      .insert([
+        {
+          nombre,
+          descripcion,
+          latitud: lat,
+          longitud: lng,
+          categoria,
+        },
+      ])
+      .select('*')
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error creando punto (Supabase admin):', error.message, 'detalle:', error.details);
+      return res.status(500).json({ message: 'Error creando punto', error: error.message });
+    }
+  } catch (e) {
+    console.error('Error creando punto (admin):', e);
+    res.status(500).json({ message: 'Error creando punto' });
+  }
 });
+
+app.put('/api/admin/mapa/:id', verifyAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { nombre, descripcion, latitud, longitud, categoria } = req.body;
+  try {
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
+
+    const lat = latitud !== undefined ? parseFloat(latitud) : null;
+    const lng = longitud !== undefined ? parseFloat(longitud) : null;
+
+    const { data, error } = await supabase
+      .from('puntos_mapa')
+      .update({
+        nombre,
+        descripcion,
+        latitud: lat,
+        longitud: lng,
+        categoria,
+      })
+      .eq('id', id)
+      .select('*')
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error actualizando punto (Supabase admin):', error.message, 'detalle:', error.details);
+      return res.status(500).json({ message: 'Error actualizando punto', error: error.message });
+    }
+
+    if (!data) {
+      return res.status(404).json({ message: 'Punto no encontrado.' });
+    }
+
+    res.json({ message: 'Punto actualizado', punto: data });
+  } catch (e) {
+    console.error('Error actualizando punto (admin):', e);
+    res.status(500).json({ message: 'Error actualizando punto' });
+  }
+});
+
 app.delete('/api/admin/mapa/:id', verifyAdmin, async (req, res) => {
-    try {
-        await pool.query('DELETE FROM puntos_mapa WHERE id = $1', [req.params.id]);
-        res.json({ message: 'Punto eliminado' });
-    } catch (e) { res.status(500).json({ message: 'Error eliminando punto' }); }
+  try {
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
+
+    const { error } = await supabase
+      .from('puntos_mapa')
+      .delete()
+      .eq('id', req.params.id);
+
+    if (error) {
+      console.error('Error eliminando punto (Supabase admin):', error.message, 'detalle:', error.details);
+      return res.status(500).json({ message: 'Error eliminando punto', error: error.message });
+    }
+
+    res.json({ message: 'Punto eliminado' });
+  } catch (e) {
+    console.error('Error eliminando punto (admin):', e);
+    res.status(500).json({ message: 'Error eliminando punto' });
+  }
 });
 
 // 6. Analítica de Mapa (K-Means)
@@ -656,20 +1245,38 @@ app.post('/api/usuarios/me/guardar-mejor-puntaje', authenticateToken, async (req
   }
 
   try {
-    // Obtener puntuación actual del usuario
-    const userRes = await pool.query('SELECT puntuacion FROM usuarios WHERE id = $1', [userId]);
-    if (userRes.rowCount === 0) return res.status(404).json({ message: 'Usuario no encontrado.' });
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
 
-    const puntuacionActual = userRes.rows[0].puntuacion || 0;
+    const { data: userData, error: fetchError } = await supabase
+      .from('usuarios')
+      .select('puntuacion')
+      .eq('id', userId)
+      .maybeSingle();
 
-    // Solo actualizar si el nuevo puntaje es mayor
+    if (fetchError) {
+      console.error('Error al obtener puntuacion (Supabase):', fetchError.message);
+      return res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+    if (!userData) return res.status(404).json({ message: 'Usuario no encontrado.' });
+
+    const puntuacionActual = userData.puntuacion || 0;
+
     let nuevaPuntuacion = puntuacionActual;
     if (puntos > puntuacionActual) {
-      const result = await pool.query(
-        `UPDATE usuarios SET puntuacion = $1 WHERE id = $2 RETURNING id, nombre, codigo_estudiante, puntuacion`,
-        [puntos, userId]
-      );
-      nuevaPuntuacion = result.rows[0].puntuacion;
+      const { data: updated, error: updateError } = await supabase
+        .from('usuarios')
+        .update({ puntuacion: puntos })
+        .eq('id', userId)
+        .select('id, nombre, codigo_estudiante, puntuacion')
+        .maybeSingle();
+
+      if (updateError) {
+        console.error('Error actualizando puntuacion (Supabase):', updateError.message);
+        return res.status(500).json({ message: 'Error interno del servidor.' });
+      }
+      nuevaPuntuacion = updated?.puntuacion ?? puntos;
     }
 
     res.json({
@@ -682,6 +1289,60 @@ app.post('/api/usuarios/me/guardar-mejor-puntaje', authenticateToken, async (req
     });
   } catch (err) {
     console.error('Error al guardar puntaje:', err);
+    res.status(500).json({ message: 'Error interno del servidor.' });
+  }
+});
+
+// POST agregar puntos de misiones al campo "nivel" del usuario (acumulado global)
+app.post('/api/usuarios/me/agregar-puntos-misiones', authenticateToken, async (req, res) => {
+  const { puntos } = req.body;
+  const userId = req.user?.id;
+
+  const incremento = Number(puntos);
+  if (!Number.isFinite(incremento) || incremento <= 0) {
+    return res.status(400).json({ message: 'El campo "puntos" debe ser un número positivo.' });
+  }
+
+  try {
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
+
+    const { data: userData, error: fetchError } = await supabase
+      .from('usuarios')
+      .select('nivel')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (fetchError) {
+      console.error('Error al obtener nivel (Supabase):', fetchError.message);
+      return res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+    if (!userData) return res.status(404).json({ message: 'Usuario no encontrado.' });
+
+    const nivelActual = Number(userData.nivel || 0);
+    const nuevoNivel = nivelActual + incremento;
+
+    const { data: updated, error: updateError } = await supabase
+      .from('usuarios')
+      .update({ nivel: nuevoNivel })
+      .eq('id', userId)
+      .select('id, nombre, nivel')
+      .maybeSingle();
+
+    if (updateError) {
+      console.error('Error actualizando nivel (Supabase):', updateError.message);
+      return res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+
+    res.json({
+      message: 'Puntos de misiones agregados',
+      incremento,
+      nivelAnterior: nivelActual,
+      nivelActualizado: updated?.nivel ?? nuevoNivel,
+    });
+  } catch (err) {
+    console.error('Error al agregar puntos de misiones:', err);
     res.status(500).json({ message: 'Error interno del servidor.' });
   }
 });
@@ -700,20 +1361,38 @@ app.post('/api/usuarios/me/guardar-mejor-puntaje-segundo', authenticateToken, as
   }
 
   try {
-    // Obtener puntuación actual del usuario
-    const userRes = await pool.query('SELECT puntuacion_segundo FROM usuarios WHERE id = $1', [userId]);
-    if (userRes.rowCount === 0) return res.status(404).json({ message: 'Usuario no encontrado.' });
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
 
-    const puntuacionActual = userRes.rows[0].puntuacion_segundo || 0;
+    const { data: userData, error: fetchError } = await supabase
+      .from('usuarios')
+      .select('puntuacion_segundo')
+      .eq('id', userId)
+      .maybeSingle();
 
-    // Solo actualizar si el nuevo puntaje es mayor
+    if (fetchError) {
+      console.error('Error al obtener puntuacion_segundo (Supabase):', fetchError.message);
+      return res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+    if (!userData) return res.status(404).json({ message: 'Usuario no encontrado.' });
+
+    const puntuacionActual = userData.puntuacion_segundo || 0;
+
     let nuevaPuntuacion = puntuacionActual;
     if (puntuacion_segundo > puntuacionActual) {
-      const result = await pool.query(
-        `UPDATE usuarios SET puntuacion_segundo = $1 WHERE id = $2 RETURNING id, nombre, codigo_estudiante, puntuacion_segundo`,
-        [puntuacion_segundo, userId]
-      );
-      nuevaPuntuacion = result.rows[0].puntuacion_segundo;
+      const { data: updated, error: updateError } = await supabase
+        .from('usuarios')
+        .update({ puntuacion_segundo })
+        .eq('id', userId)
+        .select('id, nombre, codigo_estudiante, puntuacion_segundo')
+        .maybeSingle();
+
+      if (updateError) {
+        console.error('Error actualizando puntuacion_segundo (Supabase):', updateError.message);
+        return res.status(500).json({ message: 'Error interno del servidor.' });
+      }
+      nuevaPuntuacion = updated?.puntuacion_segundo ?? puntuacion_segundo;
     }
 
     res.json({
@@ -783,58 +1462,92 @@ app.get('/api/v1/content/calendar', async (req, res) => {
 });
 
 
-// GET todos los productos
+// GET todos los productos (desde Supabase)
 app.get('/api/v1/products', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM productos ORDER BY RANDOM() LIMIT 5');
-    res.json(result.rows);
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
+
+    const { data, error } = await supabase
+      .from('productos')
+      .select('*')
+      .order('id', { ascending: true })
+      .limit(50);
+
+    if (error) {
+      console.error('Error al obtener productos (Supabase):', error.message);
+      return res.status(500).json({ message: 'Error al obtener productos' });
+    }
+
+    res.json(data || []);
   } catch (error) {
     console.error('Error al obtener productos:', error);
     res.status(500).json({ message: 'Error al obtener productos' });
   }
 });
 
-// GET productos por categoría
+// GET productos por categoría (desde Supabase)
 app.get('/api/v1/products/category/:categoria', async (req, res) => {
   try {
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
+
     const { categoria } = req.params;
     
-    // Validar que la categoría no esté vacía
     if (!categoria || categoria.trim() === '') {
       return res.status(400).json({ message: 'La categoría no puede estar vacía.' });
     }
 
-    const result = await pool.query(
-      'SELECT * FROM productos WHERE LOWER(categoria) = LOWER($1) ORDER BY RANDOM() LIMIT 20',
-      [categoria]
-    );
-    
-    if (result.rows.length === 0) {
+    const { data, error } = await supabase
+      .from('productos')
+      .select('*')
+      .ilike('categoria', categoria)
+      .order('id', { ascending: true })
+      .limit(50);
+
+    if (error) {
+      console.error('Error al obtener productos por categoría (Supabase):', error.message);
+      return res.status(500).json({ message: 'Error al obtener productos' });
+    }
+
+    if (!data || data.length === 0) {
       return res.status(404).json({ message: 'No hay productos en esta categoría.' });
     }
 
-    res.json(result.rows);
+    res.json(data);
   } catch (error) {
     console.error('Error al obtener productos por categoría:', error);
     res.status(500).json({ message: 'Error al obtener productos' });
   }
 });
 
-// GET productos aleatorios
+// GET productos (ruta usada por el juego, desde Supabase)
 app.get('/api/v1/products/random/:cantidad', async (req, res) => {
   try {
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
+
     const { cantidad } = req.params;
     
     if (!validarCantidad(cantidad)) {
       return res.status(400).json({ message: 'La cantidad debe ser un número entre 1 y 50.' });
     }
 
-    const result = await pool.query(
-      'SELECT * FROM productos ORDER BY RANDOM() LIMIT $1',
-      [parseInt(cantidad)]
-    );
-    
-    res.json(result.rows);
+    const { data, error } = await supabase
+      .from('productos')
+      .select('*')
+      .order('id', { ascending: true })
+      .limit(parseInt(cantidad));
+
+    if (error) {
+      console.error('Error al obtener productos para juego (Supabase):', error.message);
+      return res.status(500).json({ message: 'Error al obtener productos' });
+    }
+
+    res.json(data || []);
   } catch (error) {
     console.error('Error al obtener productos aleatorios:', error);
     res.status(500).json({ message: 'Error al obtener productos' });
@@ -856,27 +1569,32 @@ const diasEspeciales = [
 ];
 
 
-// GET novedades para el carrusel solo muestra las que no estan en visibilidad false
+// GET novedades para el carrusel solo muestra las que no estan en visibilidad false (Supabase)
 app.get('/api/novedades', async (req, res) => {
   try {
-    // Intentar filtrar por columna visible si existe; si no, devolver todas
-    let rows = [];
-    try {
-      const withVisible = await pool.query('SELECT * FROM novedades WHERE visible IS DISTINCT FROM FALSE ORDER BY fecha_publicacion DESC');
-      rows = withVisible.rows;
-    } catch (e) {
-      // Fallback si la columna visible no existe
-      const all = await pool.query('SELECT * FROM novedades ORDER BY fecha_publicacion DESC');
-      rows = all.rows;
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
     }
+
+    const { data, error } = await supabase
+      .from('novedades')
+      .select('*')
+      .order('fecha_publicacion', { ascending: false });
+
+    if (error) {
+      console.error('Error al obtener novedades (Supabase):', error.message);
+      return res.status(500).json({ message: 'Error al obtener novedades' });
+    }
+
+    const rows = data || [];
     const novedades = rows.map(novedad => ({
-        id: novedad.id,
-        title: novedad.titulo,
-        summary: novedad.resumen,
-        date: new Date(novedad.fecha_publicacion).toLocaleDateString('es-MX'),
-        visible: novedad.visible === undefined ? true : !!novedad.visible
+      id: novedad.id,
+      title: novedad.titulo,
+      summary: novedad.resumen,
+      date: new Date(novedad.fecha_publicacion).toLocaleDateString('es-MX'),
+      visible: novedad.visible === undefined ? true : !!novedad.visible
     }));
-    // Filtrar solo visibles para el carrusel público
+
     res.json(novedades.filter(n => n.visible));
   } catch (error) {
     console.error('Error al obtener novedades:', error);
@@ -889,6 +1607,10 @@ app.put('/api/admin/novedades/:id/visibilidad', verifyAdmin, async (req, res) =>
   const { id } = req.params;
   const { visible } = req.body;
   try {
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
+
     // Normalizar el valor visible aceptando string "true"/"false"
     let vis = visible;
     if (typeof vis === 'string') {
@@ -898,36 +1620,53 @@ app.put('/api/admin/novedades/:id/visibilidad', verifyAdmin, async (req, res) =>
       return res.status(400).json({ message: 'El campo "visible" debe ser booleano.' });
     }
 
-    // Asegurar que la columna existe antes de actualizar
-    try { await pool.query('ALTER TABLE novedades ADD COLUMN IF NOT EXISTS visible BOOLEAN DEFAULT TRUE'); } catch (_) {}
+    const { data, error } = await supabase
+      .from('novedades')
+      .update({ visible: vis })
+      .eq('id', id)
+      .select('id, titulo, resumen, fecha_publicacion, visible')
+      .maybeSingle();
 
-    const result = await pool.query(
-      'UPDATE novedades SET visible = $1 WHERE id = $2 RETURNING id, titulo, resumen, fecha_publicacion, visible',
-      [vis, id]
-    );
-    if (result.rowCount === 0) return res.status(404).json({ message: 'Noticia no encontrada.' });
-    res.json({ message: 'Visibilidad actualizada', novedad: result.rows[0] });
+    if (error) {
+      console.error('Error actualizando visibilidad (Supabase):', error.message);
+      return res.status(500).json({ message: 'Error al actualizar visibilidad', error: error.message });
+    }
+    if (!data) {
+      return res.status(404).json({ message: 'Noticia no encontrada.' });
+    }
+
+    res.json({ message: 'Visibilidad actualizada', novedad: data });
   } catch (error) {
     console.error('Error actualizando visibilidad:', error);
     res.status(500).json({ message: 'Error al actualizar visibilidad', error: String(error?.message || error) });
   }
 });
 
-// Admin: listar todas las novedades sin filtrar visibilidad
+// Admin: listar todas las novedades sin filtrar visibilidad (Supabase)
 app.get('/api/admin/novedades', verifyAdmin, async (req, res) => {
   try {
-    let rows;
-    try {
-      const withVisible = await pool.query('SELECT * FROM novedades ORDER BY fecha_publicacion DESC');
-      rows = withVisible.rows;
-    } catch (e) {
-      const all = await pool.query('SELECT * FROM novedades ORDER BY fecha_publicacion DESC');
-      rows = all.rows;
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
     }
+
+    const { data, error } = await supabase
+      .from('novedades')
+      .select('*')
+      .order('fecha_publicacion', { ascending: false });
+
+    if (error) {
+      console.error('Error admin obteniendo novedades (Supabase):', error.message);
+      return res.status(500).json({ message: 'Error al obtener novedades admin' });
+    }
+
+    const rows = data || [];
     const novedades = rows.map(n => ({
       id: n.id,
       title: n.titulo,
       summary: n.resumen,
+      // fecha cruda para edición desde AdminPanel
+      fecha_publicacion: n.fecha_publicacion,
+      // fecha formateada solo para mostrar en la UI
       date: new Date(n.fecha_publicacion).toLocaleDateString('es-MX'),
       visible: n.visible === undefined ? true : !!n.visible
     }));
@@ -938,17 +1677,32 @@ app.get('/api/admin/novedades', verifyAdmin, async (req, res) => {
   }
 });
 
-// GET eventos si acceden a mas informacion sea hace los detalles
+// GET eventos si acceden a mas informacion se hace los detalles (Supabase)
 app.get('/api/eventos', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM eventos ORDER BY fecha DESC, hora ASC LIMIT 20');
-    const eventos = result.rows.map(evento => ({
-        id: evento.id,
-        title: evento.titulo,
-        location: evento.ubicacion,
-        date: new Date(evento.fecha).toLocaleDateString('es-MX'),
-        time: evento.hora,
-        description: evento.descripcion
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
+
+    const { data, error } = await supabase
+      .from('eventos')
+      .select('*')
+      .order('fecha', { ascending: false })
+      .order('hora', { ascending: true })
+      .limit(20);
+
+    if (error) {
+      console.error('Error al obtener eventos (Supabase):', error.message);
+      return res.status(500).json({ message: 'Error al obtener eventos' });
+    }
+
+    const eventos = (data || []).map(evento => ({
+      id: evento.id,
+      title: evento.titulo,
+      location: evento.ubicacion,
+      date: new Date(evento.fecha).toLocaleDateString('es-MX'),
+      time: evento.hora,
+      description: evento.descripcion
     }));
     res.json(eventos);
   } catch (error) {
@@ -956,8 +1710,6 @@ app.get('/api/eventos', async (req, res) => {
     res.status(500).json({ message: 'Error al obtener eventos' });
   }
 });
-
-
 
 // Convierte una cadena "lat,long" a [lat, lng]
 function parseUbicacionToLatLng(ubicacion) {
@@ -1059,12 +1811,24 @@ app.get('/api/admin/heatmap/reportes', verifyAdmin, async (req, res) => {
     const days = Number.isFinite(daysParam) ? Math.min(Math.max(daysParam, 1), 365) : 30;
     const k = Number.isFinite(kParam) ? Math.min(Math.max(kParam, 1), 10) : 4;
 
-    const result = await pool.query('SELECT id, titulo, descripcion, tipo, ubicacion, estado, fecha_reporte FROM reportes');
+    if (!supabase) {
+      return res.status(500).json({ message: 'Supabase no está configurado.' });
+    }
+
+    // Leer todos los reportes desde Supabase; luego filtramos por ubicación y ventana de días
+    const { data: reportes, error } = await supabase
+      .from('reportes')
+      .select('id, titulo, descripcion, tipo, ubicacion, estado, fecha_reporte');
+
+    if (error) {
+      console.error('Error leyendo reportes para heatmap (Supabase):', error.message);
+      return res.status(500).json({ message: 'Error al leer reportes para heatmap' });
+    }
 
     const now = Date.now();
     const millisPerDay = 1000 * 60 * 60 * 24;
 
-    const puntosValidos = result.rows
+    const puntosValidos = (reportes || [])
       .map(row => {
         const coords = parseUbicacionToLatLng(row.ubicacion);
         if (!coords) return null;
@@ -1161,8 +1925,16 @@ app.get('/api/calendario', async (req, res) => {
 
         // Intentar obtener fechas importantes de la BD
         try {
-            const resultBD = await pool.query('SELECT * FROM fechas_importantes ORDER BY fecha ASC');
-            const calendarioBD = resultBD.rows.map(item => ({
+      if (!supabase) throw new Error('Supabase no configurado');
+
+      const { data: fechasData, error: fechasError } = await supabase
+        .from('fechas_importantes')
+        .select('*')
+        .order('fecha', { ascending: true });
+
+      if (fechasError) throw fechasError;
+
+      const calendarioBD = (fechasData || []).map(item => ({
                 id: item.id,
                 title: item.titulo,
                 date: item.fecha,
@@ -1175,8 +1947,16 @@ app.get('/api/calendario', async (req, res) => {
 
         // Intentar obtener eventos de la BD
         try {
-            const resultEventos = await pool.query('SELECT * FROM eventos ORDER BY fecha ASC');
-            const calendarioEventos = resultEventos.rows.map(item => ({
+      if (!supabase) throw new Error('Supabase no configurado');
+
+      const { data: eventosData, error: eventosError } = await supabase
+        .from('eventos')
+        .select('*')
+        .order('fecha', { ascending: true });
+
+      if (eventosError) throw eventosError;
+
+      const calendarioEventos = (eventosData || []).map(item => ({
                 id: `evento-${item.id}`,
                 title: item.titulo,
                 date: item.fecha,
@@ -1194,7 +1974,8 @@ app.get('/api/calendario', async (req, res) => {
         try {
             const año = new Date().getFullYear();
             const responseNager = await axios.get(`https://date.nager.at/api/v3/PublicHolidays/${año}/MX`, {
-                timeout: 5000
+              // Aumentamos el timeout para dar más margen a la API externa
+              timeout: 15000
             });
             
             const calendarioNager = responseNager.data.map(holiday => ({
