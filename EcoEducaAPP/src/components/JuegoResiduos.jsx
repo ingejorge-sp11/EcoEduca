@@ -4,6 +4,7 @@ import manzana from '../assets/objetos/manzana.png';
 import naranja from '../assets/objetos/naranja.png';
 import huevo from '../assets/objetos/huevo.png';
 import paisaje2 from '../assets/paisaje2.0.jpg';
+import ardillaImg from '../assets/ardilla.png';
 
 export default function JuegoResiduos() {
 	const [consejo, setConsejo] = useState("");
@@ -15,9 +16,10 @@ export default function JuegoResiduos() {
   const [objetosEnPantalla, setObjetosEnPantalla] = useState([]);
   const [userId, setUserId] = useState(null);
   const [cargando, setCargando] = useState(true);
-  const [tiempoRestante, setTiempoRestante] = useState(60); 
+  const [tiempoRestante, setTiempoRestante] = useState(30); 
   const [timerActive, setTimerActive] = useState(false);
   const [objetoSeleccionado, setObjetoSeleccionado] = useState(null);
+  const [squirrelSpot, setSquirrelSpot] = useState(null);
 
   const objetos = [
   { nombre: "Cáscara de banana", categoria: "organico", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/banana.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9iYW5hbmEucG5nIiwiaWF0IjoxNzczNjI5MzQ5LCJleHAiOjE4MDUxNjUzNDl9.lARSju3dAJHVvHt4km-uq-USWsd0hFMIU0ahWWvIKsk" },
@@ -36,7 +38,6 @@ export default function JuegoResiduos() {
   { nombre: "Periódico", categoria: "reciclable", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/periodico.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9wZXJpb2RpY28ucG5nIiwiaWF0IjoxNzczNjI5NjEwLCJleHAiOjE4MDUxNjU2MTB9.pkaKygfp29IjQ-gbzTURNYYycO4RPO0R5fmx2mYxVys" },
   { nombre: "Aceite de motor usado", categoria: "peligroso", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/aceite%20de%20motor%20usado.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9hY2VpdGUgZGUgbW90b3IgdXNhZG8ucG5nIiwiaWF0IjoxNzczNjI5MzM1LCJleHAiOjE4MDUxNjUzMzV9.dACD8mNmCaY-3jx3UwKeB0iYT8ORueJsqZHQ8Uq5yqE" },
   { nombre: "Bombilla de bajo consumo", categoria: "peligroso", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/Bombilla%20de%20bajo%20consumo.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9Cb21iaWxsYSBkZSBiYWpvIGNvbnN1bW8ucG5nIiwiaWF0IjoxNzczNjI5NDA5LCJleHAiOjE4MDUxNjU0MDl9.fabcYsS3wDZl59ZDTwEioFukI8TdqxyLsW9vA1clq54" },
-  { nombre: "Cartucho de tinta", categoria: "peligroso", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/Cartucho%20de%20tinta.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9DYXJ0dWNobyBkZSB0aW50YS5wbmciLCJpYXQiOjE3NzM2Mjk1MDcsImV4cCI6MTgwNTE2NTUwN30.C3qOlPzqkmt0wgdNSw-undzcMUZNy5RtmIDJJZ-u4PY" },
   { nombre: "Pila alcalina usada", categoria: "peligroso", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/Pila%20alcalina%20usada.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9QaWxhIGFsY2FsaW5hIHVzYWRhLnBuZyIsImlhdCI6MTc3MzYyOTYyMSwiZXhwIjoxODA1MTY1NjIxfQ.HhdnLqzncjwdejCNJSixrTOTxJPuydLgawRpzQAAb_I" },
   { nombre: "Spray de insecticida", categoria: "peligroso", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/Spray%20de%20incecticida.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9TcHJheSBkZSBpbmNlY3RpY2lkYS5wbmciLCJpYXQiOjE3NzM2Mjk2NTgsImV4cCI6MTgwNTE2NTY1OH0.sNku9I4kBn16chppGvZy6RfUvDWwbreZN0s10262u5E" },
   { nombre: "Termómetro de mercurio", categoria: "peligroso", imagen: "https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/Termometro%20de%20mercurio.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9UZXJtb21ldHJvIGRlIG1lcmN1cmlvLnBuZyIsImlhdCI6MTc3MzYyOTY3MSwiZXhwIjoxODA1MTY1NjcxfQ.GmBV9NoRkZ3MUJIUnjrz84s0Izh0MZR-fTYXTX5zyM4" },
@@ -48,16 +49,17 @@ export default function JuegoResiduos() {
 ];
 
   const contenedoresConfig = {
-    organico: { emoji: "🍃", color: "#7CAB70", label: "ORGÁNICO" },
-    reciclable: { emoji: "♻️", color: "#7BA3D0", label: "PAPEL Y CARTÓN" },
-    vidrio: { emoji: "🧪", color: "#E6C94F", label: "PLÁSTICO" },
-    peligroso: { emoji: "☣️", color: "#E08080", label: "PELIGROSO" },
-    no_reciclable: { emoji: "🚯", color: "#A9A9A9", label: "NO RECICLABLE" },
+    organico: { emoji: "🍃", color: "#6BA75A", label: "ORGÁNICO" },
+    reciclable: { emoji: "♻️", color: "#4A90E2", label: "PAPEL Y CARTÓN" },
+    vidrio: { emoji: "🧪", color: "#F5C842", label: "PLÁSTICO" },
+    peligroso: { emoji: "☣️", color: "#E05A5A", label: "PELIGROSO" },
+    no_reciclable: { emoji: "🚯", color: "#8C8C8C", label: "NO RECICLABLE" },
   };
 
   const generarObjetos = async () => {
     const nuevosObjetos = [];
-    for (let i = 0; i < 8; i++) {
+    // Oleadas más pequeñas para que se sienta por rondas
+    for (let i = 0; i < 5; i++) {
       const objeto = objetos[Math.floor(Math.random() * objetos.length)];
       nuevosObjetos.push({
         ...objeto,
@@ -115,8 +117,28 @@ export default function JuegoResiduos() {
       setObjetosEnPantalla(objetosIniciales);
       setCargando(false);
       setTimerActive(true);
-      setTiempoRestante(60);
+      setTiempoRestante(30);
     })();
+  }, []);
+
+  // Posición aleatoria para la ardilla decorativa
+  useEffect(() => {
+    const spots = [
+      // Distintos puntos a lo largo del borde superior (línea verde)
+      { top: '-6px', left: '8%' },
+      { top: '-6px', left: '28%' },
+      { top: '-6px', left: '52%' },
+      { top: '-6px', left: '75%' },
+    ];
+
+    const pickSpot = () => {
+      const idx = Math.floor(Math.random() * spots.length);
+      setSquirrelSpot(spots[idx]);
+    };
+
+    pickSpot();
+    const id = setInterval(pickSpot, 14000);
+    return () => clearInterval(id);
   }, []);
 
   // Obtener consejo cuando termina el juego
@@ -245,7 +267,7 @@ export default function JuegoResiduos() {
     setGameOver(false);
     setPuntajeFinal(0);
     setMensaje("");
-    setTiempoRestante(60);
+    setTiempoRestante(30);
     setTimerActive(true);
     const nuevosObjetos = await generarObjetos();
     setObjetosEnPantalla(nuevosObjetos);
@@ -303,40 +325,66 @@ export default function JuegoResiduos() {
               backgroundImage: `url(${paisaje2})`,
             }}
           >
+            {/* Partículas/hojas en el área de juego */}
+            <div className="pointer-events-none absolute inset-0 z-0">
+              {/* Hojas flotando suavemente */}
+              <div className="absolute text-2xl opacity-40 animate-float-leaf" style={{ left: '15%', top: '10%' }}>🍃</div>
+              <div className="absolute text-2xl opacity-40 animate-float-leaf" style={{ left: '70%', top: '25%', animationDelay: '1s' }}>🍂</div>
+              <div className="absolute text-2xl opacity-40 animate-float-leaf" style={{ left: '40%', top: '60%', animationDelay: '0.5s' }}>🍃</div>
+
+              {/* Hojas/cosas que caen como lluvia ligera */}
+              <div className="absolute text-xl opacity-40 animate-fall-leaf" style={{ left: '5%', animationDelay: '0.2s' }}>🍂</div>
+              <div className="absolute text-xl opacity-40 animate-fall-leaf" style={{ left: '30%', animationDelay: '1.4s' }}>🍁</div>
+              <div className="absolute text-xl opacity-40 animate-fall-leaf" style={{ left: '55%', animationDelay: '0.9s' }}>🍃</div>
+              <div className="absolute text-xl opacity-40 animate-fall-leaf" style={{ left: '80%', animationDelay: '2s' }}>🍂</div>
+
+              {/* Ardilla decorativa que aparece de vez en cuando a lo largo del borde superior */}
+              <div
+                className="absolute opacity-0 animate-squirrel z-20 flex items-end justify-center"
+                style={squirrelSpot || { bottom: '6%', right: '10%' }}
+              >
+                <img
+                  src={ardillaImg}
+                  alt="Ardilla curiosa"
+                  className="w-24 h-24 md:w-28 md:h-28 drop-shadow-lg pointer-events-none"
+                />
+              </div>
+            </div>
+
             {/* Contenedores en la parte inferior (scroll horizontal en móvil) */}
-            <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-2 z-20 px-3 overflow-x-auto">
+            <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-3 z-20 px-4 overflow-x-auto">
               {Object.entries(contenedoresConfig).map(([id, config]) => (
                 <div
                   key={id}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => handleDrop(e, id)}
                   onClick={() => handleContainerClick(id)}
-                  className="group cursor-pointer flex-1 max-w-xs"
+                  className="group cursor-pointer flex-1 max-w-sm"
                 >
                   {/* Bote de basura */}
-                  <div className="transform transition-all hover:scale-110 relative">
+                  <div className="transform transition-all hover:scale-110 relative rounded-3xl overflow-visible contenedor-brillante">
                     {/* Tapa */}
                     <div
-                      className="rounded-t-full px-3 py-1 text-center shadow-md"
+                      className="rounded-t-full px-4 py-2 text-center shadow-md text-2xl"
                       style={{ backgroundColor: config.color }}
                     >
-                      <div className="text-xl">{config.emoji}</div>
+                      <div>{config.emoji}</div>
                     </div>
                     
                     {/* Cuerpo */}
                     <div
-                      className="rounded-b-2xl px-3 py-2 text-center border-l-4 border-r-4 border-b-4 border-gray-800 shadow-lg"
+                      className="rounded-b-3xl px-4 py-3 text-center border-l-4 border-r-4 border-b-4 border-gray-800 shadow-lg"
                       style={{ 
                         backgroundColor: config.color,
                         filter: 'brightness(0.85)'
                       }}
                     >
-                      <p className="text-white font-bold text-xs">{config.label}</p>
+                      <p className="text-white font-bold text-sm tracking-wide">{config.label}</p>
                     </div>
 
                     {/* Línea de apertura */}
                     <div
-                      className="absolute top-6 left-1/2 transform -translate-x-1/2 w-6 h-0.5 rounded-full opacity-40"
+                      className="absolute top-7 left-1/2 transform -translate-x-1/2 w-10 h-0.5 rounded-full opacity-60"
                       style={{ 
                         backgroundColor: config.color,
                         filter: 'brightness(1.2)'
@@ -347,7 +395,7 @@ export default function JuegoResiduos() {
               ))}
             </div>
 
-            {/* Objetos dispersos en el área */}
+            {/* Objetos dispersos en el área (oleadas con pequeña animación) */}
             {objetosEnPantalla.length > 0 ? (
               objetosEnPantalla.map((objeto) => (
                 <div
@@ -358,7 +406,7 @@ export default function JuegoResiduos() {
                     e.dataTransfer.setData("text", JSON.stringify(objeto));
                   }}
                   onClick={() => setObjetoSeleccionado(objeto)}
-                  className={`absolute w-24 h-24 md:w-32 md:h-32 cursor-grab active:cursor-grabbing hover:scale-125 transition-transform ${
+                  className={`absolute w-28 h-28 md:w-36 md:h-36 cursor-grab active:cursor-grabbing hover:scale-125 transition-transform animate-wave-spawn ${
                     objetoSeleccionado && objetoSeleccionado.id === objeto.id
                       ? "ring-4 ring-yellow-400"
                       : ""
@@ -445,6 +493,36 @@ export default function JuegoResiduos() {
         }
         .animate-fall-leaf {
           animation: fall-leaf 3s linear infinite;
+        }
+        @keyframes float-leaf-soft {
+          0% { transform: translate3d(0, 0, 0) rotateZ(0deg); opacity: 0; }
+          10% { opacity: 0.6; }
+          50% { transform: translate3d(20px, 15px, 0) rotateZ(8deg); opacity: 0.8; }
+          100% { transform: translate3d(-10px, 30px, 0) rotateZ(-6deg); opacity: 0; }
+        }
+        .animate-float-leaf {
+          animation: float-leaf-soft 6s ease-in-out infinite;
+        }
+        @keyframes wave-spawn {
+          0% { transform: translate(-40%, -140%) rotateZ(-15deg) scale(0.9); opacity: 0; }
+          25% { transform: translate(-55%, -110%) rotateZ(10deg); opacity: 0.7; }
+          50% { transform: translate(-45%, -80%) rotateZ(-8deg); opacity: 1; }
+          75% { transform: translate(-55%, -60%) rotateZ(5deg); }
+          100% { transform: translate(-50%, -50%) rotateZ(0deg) scale(1); opacity: 1; }
+        }
+        .animate-wave-spawn {
+          animation: wave-spawn 1s ease-in-out;
+        }
+        .contenedor-brillante:hover {
+          box-shadow: 0 0 0 3px rgba(255,255,255,0.6), 0 0 25px rgba(88,129,87,0.9);
+        }
+        @keyframes squirrel-pop {
+          0%, 20% { transform: translateY(130%); opacity: 0; }
+          25%, 70% { transform: translateY(0); opacity: 1; }
+          75%, 100% { transform: translateY(130%); opacity: 0; }
+        }
+        .animate-squirrel {
+          animation: squirrel-pop 8s ease-in-out infinite;
         }
       `}</style>
 

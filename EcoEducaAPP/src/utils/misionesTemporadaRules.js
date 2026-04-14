@@ -4,6 +4,13 @@ const STORAGE_ACTIVIDAD_KEY = "ecoeduca_actividad_usuario";
 const STORAGE_MISIONES_TEMP_KEY = "ecoeduca_misiones_temporada";
 const STORAGE_MISIONES_DIARIAS_PREFIX = "misiones_diarias";
 
+function getCurrentSeasonKey(date = new Date()) {
+  const d = date instanceof Date ? date : new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`; 
+}
+
 function getUserKey(user) {
   return user && user.id ? `u${user.id}` : "anon";
 }
@@ -28,7 +35,16 @@ function leerEstadoMisionesTemporada(user) {
     const parsed = JSON.parse(raw) || {};
     const userKey = getUserKey(user);
     const userState = parsed[userKey];
-    return userState && typeof userState === "object" ? userState : {};
+    if (!userState || typeof userState !== "object") return {};
+
+    const currentSeason = getCurrentSeasonKey(new Date());
+    const storedSeason = userState.__seasonKey;
+
+    if (storedSeason && storedSeason !== currentSeason) {
+      return {};
+    }
+
+    return userState;
   } catch {
     return {};
   }
@@ -54,10 +70,10 @@ function guardarEstadoMisionesTemporada(user, estadoPorMision) {
     const raw = window.localStorage.getItem(STORAGE_MISIONES_TEMP_KEY);
     const globalState = raw ? JSON.parse(raw) || {} : {};
     const userKey = getUserKey(user);
-    globalState[userKey] = estadoPorMision;
+    const seasonKey = getCurrentSeasonKey(new Date());
+    globalState[userKey] = { ...estadoPorMision, __seasonKey: seasonKey };
     window.localStorage.setItem(STORAGE_MISIONES_TEMP_KEY, JSON.stringify(globalState));
   } catch {
-    // Ignorar errores de localStorage
   }
 }
 
@@ -144,7 +160,6 @@ export function calcularMisionesTemporadaParaUsuario(user, fechaReferencia = new
     }
   }
 
-  // Guardar cambios si hubo diferencias
   if (JSON.stringify(estadoGuardado) !== JSON.stringify(nuevoEstado)) {
     guardarEstadoMisionesTemporada(user, nuevoEstado);
     try {
@@ -152,7 +167,6 @@ export function calcularMisionesTemporadaParaUsuario(user, fechaReferencia = new
         window.dispatchEvent(new Event("ecoedu:misiones-temporada-actualizadas"));
       }
     } catch {
-      // Ignorar errores de eventos
     }
   }
 

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 const residuos = [
   {
     nombre: 'Botella de plástico',
-    imagen: 'https://cdn-icons-png.flaticon.com/512/2921/2921822.png',
+    imagen: 'https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/botella%20de%20agua.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9ib3RlbGxhIGRlIGFndWEucG5nIiwiaWF0IjoxNzczNjI5NDQyLCJleHAiOjE4MDUxNjU0NDJ9.0HkuEjwV-VnvohiUECimQ3irPzDhP7iu-W_sep0X-3I',
     procesos: [
       { nombre: 'Triturar', correcto: true, explicacion: 'Las botellas de plástico se trituran para facilitar su reciclaje.' },
       { nombre: 'Fundir', correcto: false, explicacion: 'Primero deben triturarse antes de fundirse.' },
@@ -226,44 +226,79 @@ export default function JuegoReciclajeAnimado() {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-6 max-w-md mx-auto flex flex-col items-center relative overflow-visible">
+    <div className="bg-gradient-to-b from-sky-50 via-emerald-50 to-white rounded-3xl shadow-xl p-6 sm:p-8 max-w-3xl mx-auto flex flex-col items-center relative overflow-visible">
       {errorUsuario && (
         <div className="mb-4 p-2 bg-red-100 text-red-700 rounded w-full text-center font-semibold">{errorUsuario}</div>
       )}
-      <div className="flex flex-row gap-6 mb-2 w-full justify-between">
-        <div className="text-green-800 font-bold">Puntaje: {score}</div>
-        <div className="text-yellow-700 font-bold">Mejor puntaje: {highScore !== null ? highScore : '...'}</div>
+      <div className="flex flex-row gap-4 mb-3 w-full justify-end items-center">
+        <div className="flex gap-6 text-sm font-bold">
+          <div className="text-emerald-800">
+            <span className="block text-xs uppercase tracking-wide text-emerald-700/80">Puntaje</span>
+            <span className="text-xl">⭐ {score}</span>
+          </div>
+          <div className="text-amber-700">
+            <span className="block text-xs uppercase tracking-wide text-amber-700/80">Mejor</span>
+            <span className="text-xl">🏆 {highScore !== null ? highScore : '...'}</span>
+          </div>
+        </div>
       </div>
-      <h2 className="text-xl font-bold mb-4 text-green-700">Juego: Planta de Reciclaje</h2>
+      <h2 className="text-2xl sm:text-3xl font-extrabold mb-2 text-emerald-800 text-center tracking-tight">Quiz de Procesos de Reciclaje</h2>
+      <div className="mb-4" />
       {!final ? (
         <>
-          {/* Fondo de planta */}
-          <div className="w-full h-56 mb-4 flex items-end justify-center relative" style={{background: 'linear-gradient(180deg, #e0f2fe 60%, #b9e6c9 100%)', borderRadius: '1rem'}}>
-            {/* Cinta transportadora */}
-            <div style={{position:'absolute', left:0, right:0, bottom:40, height:32, background:'#888', borderRadius:16, boxShadow:'0 2px 8px #0002', zIndex:1}}>
-              <div style={{position:'absolute', left:12, bottom:-18, width:28, height:28, background:'#666', borderRadius:'50%', border:'4px solid #444'}}></div>
-              <div style={{position:'absolute', right:12, bottom:-18, width:28, height:28, background:'#666', borderRadius:'50%', border:'4px solid #444'}}></div>
-              {/* Líneas de la cinta */}
-              {[...Array(6)].map((_,i)=>(
-                <div key={i} style={{position:'absolute', left:`${15+i*45}px`, top:8, width:8, height:16, background:'#bbb', borderRadius:4, opacity:0.7}}></div>
-              ))}
+          {/* Zona principal: tarjeta del residuo arriba y respuestas abajo */}
+          <div className="w-full flex flex-col gap-6 items-stretch mt-2">
+            {/* Tarjeta del residuo objetivo */}
+            <div className="flex-1 flex flex-col items-center justify-center bg-white/80 border border-emerald-100 rounded-2xl shadow-lg p-4 relative overflow-hidden">
+              <div className="absolute -top-10 -right-6 text-7xl opacity-10 select-none">
+                ♻️
+              </div>
+              <span className="text-xs font-semibold uppercase tracking-wide text-emerald-600 mb-1">Residuo objetivo</span>
+              <h3 className="font-extrabold text-lg sm:text-xl mb-2 text-emerald-900 text-center">{residuo.nombre}</h3>
+              <div className="bg-gradient-to-b from-sky-100 to-emerald-100 rounded-3xl border border-emerald-200 shadow-inner flex items-center justify-center w-60 h-60 sm:w-72 sm:h-72 mb-3">
+                <img
+                  src={residuo.imagen}
+                  alt={residuo.nombre}
+                  className="h-36 sm:h-44 drop-shadow-xl"
+                />
+              </div>
+              <p className="text-sm text-emerald-700 text-center font-medium">¿Qué proceso se realiza en la planta para reciclarlo?</p>
             </div>
-            {/* Residuo sobre la cinta */}
-            <img src={residuo.imagen} alt={residuo.nombre} className="h-32 z-10" style={{position:'absolute', left:'50%', transform:'translateX(-50%)', bottom:56}} />
-          </div>
-          <h3 className="font-bold text-lg mb-2 text-green-800">{residuo.nombre}</h3>
-          <p className="mb-4 text-center font-medium">¿Qué proceso se realiza en la planta?</p>
-          <div className="flex flex-wrap gap-3 mb-4">
-            {procesosMezclados.map((proceso, i) => (
-              <button
-                key={i}
-                className={`px-4 py-2 rounded font-bold border transition-colors ${acierto === null ? 'bg-gray-100 hover:bg-green-200' : proceso.correcto ? 'bg-green-500 text-white' : 'bg-red-300 text-white'}`}
-                disabled={acierto !== null}
-                onClick={() => handleProceso(proceso)}
-              >
-                {proceso.nombre}
-              </button>
-            ))}
+
+            {/* Tarjetas de respuesta alineadas en fila (3 columnas en pantallas amplias) */}
+            <div className="w-full max-w-3xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {procesosMezclados.map((proceso, i) => {
+                const letras = ['A', 'B', 'C', 'D'];
+                // Paleta vibrante: verde, azul y café más llamativos
+                const coloresBase = ['bg-emerald-400', 'bg-sky-400', 'bg-amber-500'];
+                const color = coloresBase[i % coloresBase.length];
+
+                let estadoClase = '';
+                if (acierto === null) {
+                  estadoClase = `${color} hover:brightness-110 hover:scale-[1.02]`;
+                } else if (proceso.correcto) {
+                  estadoClase = 'bg-emerald-500';
+                } else {
+                  estadoClase = 'bg-rose-400';
+                }
+
+                return (
+                  <button
+                    key={i}
+                    disabled={acierto !== null}
+                    onClick={() => handleProceso(proceso)}
+                    className={`relative rounded-2xl shadow-lg border border-white/40 text-white font-bold px-4 py-3 text-left flex items-center gap-3 transition-transform duration-150 hover:shadow-2xl ${estadoClase} ${acierto !== null ? 'cursor-default' : 'cursor-pointer'}`}
+                  >
+                    <div className="flex items-center justify-center w-9 h-9 rounded-full bg-white/90 text-gray-900 text-base shadow-inner flex-shrink-0">
+                      {letras[i]}
+                    </div>
+                    <span className="text-sm sm:text-base leading-snug">
+                      {proceso.nombre}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
           {mensaje && (
             <div className={`mb-2 text-center ${acierto ? 'text-green-700' : 'text-red-700'}`}>{mensaje}</div>

@@ -5,9 +5,9 @@ import { Trophy } from "lucide-react";
 const Leaderboard = ({ user }) => {
   const [usuarios, setUsuarios] = useState([]); // top 6
   const [loading, setLoading] = useState(true);
-  const [usuarioActual, setUsuarioActual] = useState(null); // si está en el top
-  const [posicionActual, setPosicionActual] = useState(null); // rank global
-  const [detalleUsuario, setDetalleUsuario] = useState(null); // datos currentUser del API
+  const [usuarioActual, setUsuarioActual] = useState(null); 
+  const [posicionActual, setPosicionActual] = useState(null); 
+  const [detalleUsuario, setDetalleUsuario] = useState(null); 
   const [error, setError] = useState(null);
 
   useEffect(() => {

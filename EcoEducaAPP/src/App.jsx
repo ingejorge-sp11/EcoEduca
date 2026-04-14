@@ -12,10 +12,8 @@ import '../css/carousel-noticias.css';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents} from 'react-leaflet'
 import JuegoReciclajeAnimado from "./components/juegos/JuegoReciclajeAnimado";
 import { registrarActividadUsuario, limpiarActividadUsuario } from "./utils/userActivityRecommender";
-// import JuegoReciclajeKonva from "./components/juegos/JuegoReciclajeKonva";
-// import JuegoReciclajePixi from "./components/juegos/JuegoReciclajePixi";
 
-// Usamos ruta relativa para que Vite la proxy hacia el backend en localhost:3002
+
 const API_URL = '/api';
 
 //BARRA DE NAVEGACION (ICONOS)

@@ -38,16 +38,13 @@ const guardarPuntosEnServidor = async (puntosGanados) => {
   }
 };
 
-// OPCIÓN A: Si tienes un botón "Terminar Juego"
 const handleTerminarJuego = async () => {
-  // Guardar puntos antes de terminar
+
   const exito = await guardarPuntosEnServidor(puntaje);
 
   if (exito) {
-    // Mostrar mensaje de éxito
     setMensaje(`¡Ganaste ${puntaje} puntos! ⭐`);
 
-    // Opcionalmente redirigir a Misiones después de 2 segundos
     setTimeout(() => {
       window.location.href = '/misiones';
     }, 2000);
@@ -59,9 +56,7 @@ const handleTerminarJuego = async () => {
 };
 
 
-// Agregar useEffect que monitoree el estado del juego
 useEffect(() => {
-  // Cuando gameOver cambia a true, guardar puntos
   if (gameOver && puntajeFinal > 0) {
     guardarPuntosEnServidor(puntajeFinal).then((exito) => {
       if (exito) {
@@ -76,11 +71,9 @@ const manejarRespuestaCorrecta = async (puntos) => {
   const nuevoPuntaje = puntaje + puntos;
   setPuntaje(nuevoPuntaje);
 
-  // Guardar progresivamente en servidor
   const exito = await guardarPuntosEnServidor(nuevoPuntaje);
 
   if (exito) {
-    // El usuario está acumulando puntos en el servidor
     console.log(`Progreso guardado: ${nuevoPuntaje} puntos`);
   }
 };
@@ -90,7 +83,6 @@ const manejarRespuestaCorrecta = async (puntos) => {
     <h2>Juego Terminado</h2>
     <p>Puntaje Final: {puntajeFinal}</p>
 
-    {/* Botón para volver a Misiones */}
     <button
       onClick={() => window.location.href = '/misiones'}
       className="btn-volver"
@@ -124,7 +116,6 @@ const guardarPuntosConReintentos = async (puntosGanados, intentos = 3) => {
         return false;
       }
 
-      // Esperar 1 segundo antes de reintentar
       await new Promise(resolve => setTimeout(resolve, 1000));
     } catch (error) {
       if (i === intentos) {
@@ -138,25 +129,19 @@ const guardarPuntosConReintentos = async (puntosGanados, intentos = 3) => {
 
 
 const handleGuardarYVolver = async () => {
-  // Mostrar cargando
   setMensaje('Guardando puntos...');
 
-  // Guardar puntos con reintentos
   const exito = await guardarPuntosConReintentos(puntajeFinal);
 
   if (exito) {
-    // Mostrar éxito
     setMensaje('✅ Puntos guardados con éxito');
 
-    // Esperar 2 segundos y volver a Misiones
     setTimeout(() => {
       window.location.href = '/misiones';
     }, 2000);
   } else {
-    // Mostrar error pero permitir volver de todas formas
     setMensaje('⚠️ Error al guardar (intenta de nuevo o vuelve a Misiones)');
 
-    // Botón para volver sin guardar (fallback)
     console.warn('Puntos no se guardaron. Usuario puede volver igualmente.');
   }
 };

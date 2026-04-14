@@ -18,7 +18,6 @@ const MisionesDiarias = ({ user, puntosActuales }) => {
     const hoy = new Date().toLocaleDateString('es-ES');
     const hoyISO = new Date().toISOString().slice(0, 10); // yyyy-mm-dd
     let progreso = JSON.parse(localStorage.getItem(getProgresoKey())) || {};
-    // Si la fecha guardada no es hoy, reiniciar progreso diario
     if (progreso.fecha !== hoy) {
       progreso = { fecha: hoy };
       localStorage.setItem(getProgresoKey(), JSON.stringify(progreso));
@@ -125,11 +124,10 @@ const MisionesDiarias = ({ user, puntosActuales }) => {
       progreso.puntos_totales = puntosTotales;
       localStorage.setItem(getProgresoKey(), JSON.stringify(progreso));
 
-      // Notificar solo al frontend (versión original sin sincronizar con backend nivel)
       try {
         window.dispatchEvent(new Event('ecoedu:puntos-misiones-actualizados'));
       } catch (e) {
-        // ignorar errores en entornos sin window
+    
       }
     }
     setMisiones(misionesHoy);
@@ -138,7 +136,7 @@ const MisionesDiarias = ({ user, puntosActuales }) => {
 
   useEffect(() => {
     cargarMisiones();
-    // Escuchar cambios en localStorage (de otras pestañas)
+  
     const onStorage = (e) => {
       if (
         e.key && (
@@ -154,12 +152,10 @@ const MisionesDiarias = ({ user, puntosActuales }) => {
     return () => window.removeEventListener('storage', onStorage);
   }, [user]);
 
-  // Recargar misiones cuando trigger cambie
   useEffect(() => {
     cargarMisiones();
   }, [trigger, user]);
 
-  // Reiniciar automáticamente cuando cambie el día
   useEffect(() => {
     const checkDateChange = () => {
       const hoy = new Date().toLocaleDateString('es-ES');
@@ -172,7 +168,6 @@ const MisionesDiarias = ({ user, puntosActuales }) => {
     return () => clearInterval(intervalId);
   }, [fechaActual]);
 
-  // Render principal
   return (
     <>
       <div className="w-full">
@@ -191,7 +186,6 @@ const MisionesDiarias = ({ user, puntosActuales }) => {
             </div>
           </div>
         </div>
-        {/* Lista de misiones */}
         <div className="grid gap-6">
           {misiones.map((mision) => (
             <motion.div
@@ -242,7 +236,6 @@ const MisionesDiarias = ({ user, puntosActuales }) => {
             </motion.div>
           ))}
         </div>
-        {/* Instrucciones */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-sm text-gray-700 mb-2 font-semibold">📖 Cómo completar:</p>
           <ol className="text-sm text-gray-700 space-y-1 ml-4">

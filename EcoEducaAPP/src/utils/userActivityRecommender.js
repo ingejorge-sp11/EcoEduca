@@ -1,10 +1,5 @@
 const STORAGE_KEY = "ecoeduca_actividad_usuario";
 
-/**
- * Registra una interacción del usuario en una sección del sistema.
- * Se basa en frecuencia (número de veces que se visita/usa la sección).
- * @param {string} seccion - Identificador de la sección (por ejemplo: "resumen", "misiones", "tablero")
- */
 export function registrarActividadUsuario(seccion) {
   if (!seccion) return;
 
@@ -28,7 +23,7 @@ export function registrarActividadUsuario(seccion) {
 
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(actividad));
   } catch (e) {
-    // En caso de error con localStorage simplemente no se registra
+
   }
 }
 
@@ -75,6 +70,5 @@ export function limpiarActividadUsuario() {
     if (typeof window === "undefined" || !window.localStorage) return;
     window.localStorage.removeItem(STORAGE_KEY);
   } catch (e) {
-    // Ignorar errores de localStorage
   }
 }

@@ -87,7 +87,6 @@ const EventosView = ({ data, onSelectEvento }) => (
 const EventoDetallesView = ({ evento, onBack }) => (
     <section className="bg-gray-50 min-h-screen py-12">
         <div className="container mx-auto px-4 max-w-2xl">
-            {/* Botón Atrás */}
             <button
                 onClick={onBack}
                 className="flex items-center gap-2 text-green-600 hover:text-green-700 font-semibold mb-6 transition-colors"
@@ -96,9 +95,8 @@ const EventoDetallesView = ({ evento, onBack }) => (
                 Volver a Eventos
             </button>
 
-            {/* Card Principal */}
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-                {/* Header con color */}
+        
                 <div className="h-24 bg-gradient-to-r from-emerald-700 to-emerald-600 flex items-center justify-center">
                     <div className="text-4xl">🌿</div>
                 </div>
@@ -135,7 +133,6 @@ const EventoDetallesView = ({ evento, onBack }) => (
                         </div>
                     </div>
 
-                    {/* Descripción */}
                     <div className="border-t pt-6">
                         <h2 className="text-xl font-bold text-gray-800 mb-3">Descripción</h2>
                         <p className="text-gray-700 leading-relaxed">{evento.description}</p>

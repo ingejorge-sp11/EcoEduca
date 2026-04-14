@@ -4,7 +4,6 @@ import { MapContainer, TileLayer, Circle, CircleMarker, Marker, Popup, useMap } 
 import L from 'leaflet';
 import 'leaflet.heat';
 
-// Usamos ruta relativa para que pase por el proxy /api de Vite
 const API_URL = '/api';
 
 export default function AdminPanel() {
@@ -15,7 +14,7 @@ export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState('overview');
   const [reportes, setReportes] = useState([]);
   const [eventos, setEventos] = useState([]);
-  const [eventosSubTab, setEventosSubTab] = useState('listar'); // listar | crear
+  const [eventosSubTab, setEventosSubTab] = useState('listar'); 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editEvent, setEditEvent] = useState(null);
   const [editForm, setEditForm] = useState({ titulo:'', descripcion:'', fecha:'', hora:'', ubicacion:'' });
@@ -43,13 +42,12 @@ export default function AdminPanel() {
   const getClusterColor = (scoreRaw) => {
     const score = typeof scoreRaw === 'number' ? scoreRaw : 0;
 
-    if (score >= 40) return '#b91c1c';  // muy alta urgencia
-    if (score >= 25) return '#f97316';  // alta urgencia
-    if (score >= 10) return '#eab308';  // urgencia media
-    return '#22c55e';                   // urgencia baja
+    if (score >= 25) return '#b91c1c';  // muy alta urgencia (rojo)
+    if (score >= 15) return '#f97316';  // alta urgencia (naranja)
+    if (score >= 8)  return '#eab308';  // urgencia media (amarillo)
+    return '#22c55e';                   // urgencia baja (verde)
   };
 
-  // Capa de mapa de calor basada en leaflet.heat
   const HeatmapLayer = ({ points }) => {
     const map = useMap();
 
@@ -93,7 +91,6 @@ export default function AdminPanel() {
 
         console.log('Creando capa de calor con puntos:', heatData.length);
 
-       //Adapta el tamaño del mapa
         const size = map.getSize();
         if (!size || size.x === 0 || size.y === 0) {
           return;
@@ -137,9 +134,6 @@ export default function AdminPanel() {
     return null;
   };
 
- 
-
-  // Browser-style tab component
   const BrowserTabs = ({ tabs, activeKey, onChange }) => (
     <div className="flex items-end gap-2 mb-0">
       {tabs.map((tab, idx) => {
@@ -159,7 +153,6 @@ export default function AdminPanel() {
   );
 
   useEffect(() => {
-    // Ocultar todo si el usuario no es admin desde el cliente
     const localUser = (() => {
       try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
     })();
@@ -203,7 +196,6 @@ export default function AdminPanel() {
         } else if (s.status === 404) {
           setError('Ruta admin no encontrada en el servidor (404).');
         }
-        // Verificar /admin/me si existe
         try {
           const me = await fetch(`${API_URL}/admin/me`, { headers });
           if (me.ok) { const meJson = await me.json(); setIsAdmin(!!meJson.admin); }
@@ -267,8 +259,6 @@ export default function AdminPanel() {
           </div>
         </div>
       </div>
-
-      {/* Navegación de pestañas con iconos (sección principal) */}
       <div className="flex flex-wrap gap-2 mb-6">
         {[
           { key:'overview', label:'Resumen', icon: LayoutDashboard },
@@ -340,7 +330,6 @@ export default function AdminPanel() {
                       const res = await fetch(`${API_URL}/admin/reportes/${r.id}`, { method:'PUT', headers, body: JSON.stringify({ estado }) });
                       if (res.ok) {
                         setNotif({ type:'success', msg:'Estado actualizado' });
-                        // refrescar reportes
                         const rr = await fetch(`${API_URL}/admin/reportes`, { headers:{ 'Authorization': `Bearer ${token}` } });
                         if (rr.ok) setReportes(await rr.json());
                       } else setNotif({ type:'error', msg:'Error actualizando' });
@@ -364,7 +353,6 @@ export default function AdminPanel() {
             onChange={setEventosSubTab}
           />
           <div className="rounded-b-xl rounded-tr-xl border border-gray-300 bg-white shadow-sm p-4">
-            {/* Crear evento: */}
             {eventosSubTab === 'crear' && (
               <div className="space-y-3">
                 <button
@@ -406,8 +394,6 @@ export default function AdminPanel() {
                 )}
               </div>
             )}
-
-            {/* Listar eventos con opción de editar */}
             {eventosSubTab === 'listar' && (
               <div className="space-y-3">
                 <h3 className="font-semibold mt-2">Eventos</h3>
@@ -493,7 +479,6 @@ export default function AdminPanel() {
           />
           <div className="rounded-b-xl rounded-tr-xl border border-gray-300 bg-white shadow-sm p-4">
 
-          {/* Crear noticia: */}
           {novedadesSubTab === 'crear' && (
             <div className="space-y-3">
               <button
@@ -520,7 +505,6 @@ export default function AdminPanel() {
                         setNotif({ type:'success', msg:'Noticia creada' });
                         const n = await fetch(`${API_URL}/novedades`);
                         if (n.ok) setNovedades(await n.json());
-                        // Notificar a la app principal para refrescar el carrusel
                         window.dispatchEvent(new CustomEvent('ecoedu:novedades-updated'));
                         setNewsForm({ titulo:'', resumen:'', fecha_publicacion:'' });
                         setShowCreateNewsForm(false);
@@ -538,7 +522,6 @@ export default function AdminPanel() {
             </div>
           )}
 
-          {/* Listar novedades con opción de editar */}
           {novedadesSubTab === 'listar' && (
             <div className="space-y-3">
               <h3 className="font-semibold mt-2">Novedades</h3>
@@ -573,7 +556,6 @@ export default function AdminPanel() {
                                       const nPub = await fetch(`${API_URL}/novedades`);
                                       if (nPub.ok) setNovedades(await nPub.json());
                                     }
-                                    // Notificar a la app principal para refrescar el carrusel
                                     window.dispatchEvent(new CustomEvent('ecoedu:novedades-updated'));
                                   } else {
                                     try {
@@ -670,7 +652,6 @@ export default function AdminPanel() {
           />
           <div className="rounded-b-xl rounded-tr-xl border border-gray-300 bg-white shadow-sm p-4">
 
-          {/* Crear punto: */}
           {mapaSubTab === 'crear' && (
             <div className="space-y-3">
               <button
@@ -713,7 +694,6 @@ export default function AdminPanel() {
             </div>
           )}
 
-          {/* Listar puntos con opción de editar */}
           {mapaSubTab === 'listar' && (
             <div className="space-y-3">
               <h3 className="font-semibold mt-2">Puntos</h3>
@@ -774,8 +754,6 @@ export default function AdminPanel() {
               </ul>
             </div>
           )}
-
-          {/* Analítica IA: Heatmap de reportes */}
           {mapaSubTab === 'heatmap' && (
             <div className="space-y-4">
               <h3 className="font-semibold flex items-center gap-2">
@@ -901,10 +879,10 @@ export default function AdminPanel() {
                         }
 
                         const severityColor = getClusterColor(cluster.score || 0);
-                        // Radio ajustado para CUCEI: puntos muy cercanos, círculos más pequeños
-                        const baseRadius = 60; // metros
-                        const radiusPerReporte = 15; // metros extra por reporte en el cluster
-                        const radius = baseRadius + (cluster.count || 1) * radiusPerReporte;
+                        const baseRadius = 24; 
+                        const factor = 16; 
+                        const reportsCount = Math.max(1, cluster.count || 1);
+                        const radius = baseRadius + Math.sqrt(reportsCount) * factor;
                         return (
                           <React.Fragment key={cluster.id}>
                             <Circle

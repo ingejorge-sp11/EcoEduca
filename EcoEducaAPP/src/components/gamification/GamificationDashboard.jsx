@@ -16,7 +16,6 @@ function calcularNivelPorPuntos(puntos) {
 }
 
 function obtenerIconoNivel(nivelTexto) {
-  // Asociación ecológica de nivel → icono y etiqueta
   switch (nivelTexto) {
     case "Novato":
       return { emoji: "🌱", label: "Semilla" };
@@ -37,7 +36,6 @@ function obtenerIconoNivel(nivelTexto) {
 const GamificationDashboard = ({ user }) => {
   const [tabActiva, setTabActiva] = useState("resumen");
   const [puntosUsuario, setPuntosUsuario] = useState(0);
-  // Obtener puntos acumulados desde localStorage (versión original basada en cliente)
   useEffect(() => {
     if (typeof window === "undefined") {
       setPuntosUsuario(0);
@@ -220,7 +218,6 @@ const GamificationDashboard = ({ user }) => {
           </motion.div>
         )}
 
-        {/* Tabs (scroll horizontal en móvil) */}
         <div className="mb-8">
           <div className="border-b-2 border-gray-300 pb-0 overflow-x-auto">
             <div className="flex gap-2 min-w-max">
@@ -246,7 +243,6 @@ const GamificationDashboard = ({ user }) => {
           </div>
         </div>
 
-        {/* Contenido de tabs */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}

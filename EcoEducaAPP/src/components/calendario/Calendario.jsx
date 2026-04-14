@@ -3,20 +3,18 @@ import { TreePine } from 'lucide-react';
 import './calendario.css';
 
 const CalendarioView = ({ data }) => {
-    const [currentDate, setCurrentDate] = useState(new Date()); // Fecha actual
-    const [viewMode, setViewMode] = useState('month'); // 'month', 'week', 'day'
+    const [currentDate, setCurrentDate] = useState(new Date()); 
+    const [viewMode, setViewMode] = useState('month'); 
 
     const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     const dayNames = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
-
-    // Función helper para parsear fechas en formato YYYY-MM-DD
     const parseDate = (dateString) => {
         const partes = dateString.split('-');
         if (partes.length === 3) {
             return {
                 año: parseInt(partes[0]),
-                mes: parseInt(partes[1]) - 1, // Restar 1 porque getMonth() es 0-11
+                mes: parseInt(partes[1]) - 1, 
                 dia: parseInt(partes[2])
             };
         }
@@ -28,7 +26,6 @@ const CalendarioView = ({ data }) => {
         };
     };
 
-    // Función para obtener eventos de un día específico
     const getEventosDelDia = (dia, mes, año) => {
         return data.filter(evento => {
             const eventoDate = parseDate(evento.date);
