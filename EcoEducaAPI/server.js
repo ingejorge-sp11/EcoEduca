@@ -21,9 +21,20 @@ const PUNTOS_POR_ACIERTO = Number(process.env.PUNTOS_POR_ACIERTO) || 10; //Defin
 
 // Inicializar la aplicación de Express
 const app = express();
-const port = 3002;
+const port = process.env.PORT || 3002;
+const allowedOrigins = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
 
-app.use(cors()); // Habilita CORS para permitir peticiones desde el frontend
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Origen no permitido por CORS'));
+  }
+})); // Habilita CORS para permitir peticiones desde el frontend
 app.use(express.json()); // Permite al servidor entender JSON en las peticiones
 
 // Configuración de la conexión a la base de datos PostgreSQL 

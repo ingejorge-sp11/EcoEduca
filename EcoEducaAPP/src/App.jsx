@@ -14,7 +14,7 @@ import JuegoReciclajeAnimado from "./components/juegos/JuegoReciclajeAnimado";
 import { registrarActividadUsuario, limpiarActividadUsuario } from "./utils/userActivityRecommender";
 
 
-const API_URL = '/api';
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 //BARRA DE NAVEGACION (ICONOS)
 const Header = ({ user, onLogout, onLoginClick, onRegisterClick, onNavigate }) => {
