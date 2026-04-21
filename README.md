@@ -4,8 +4,6 @@
 
 Para una comprensión completa de cómo se desarrolló EcoEduca 2.0 usando metodología ágil **SCRUM**, consulta el documento:
 
-📖 **[METODOLOGIA_SCRUM_ECOEDUCA.md](./METODOLOGIA_SCRUM_ECOEDUCA.md)**
-
 Este documento incluye:
 - Definición de Sprints y fechas de ejecución
 - Roles SCRUM y responsabilidades
