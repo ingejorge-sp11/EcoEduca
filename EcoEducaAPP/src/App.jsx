@@ -14,7 +14,7 @@ import L from 'leaflet'; // Agregado para solucionar error de L.icon
 import JuegoReciclajeAnimado from "./components/juegos/JuegoReciclajeAnimado";
 import { registrarActividadUsuario, limpiarActividadUsuario } from "./utils/userActivityRecommender";
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3002/api';
 
 // --- NUEVO COMPONENTE: Capturador de clics en el mapa ---
 function LocationPicker({ onLocationSelected }) {
