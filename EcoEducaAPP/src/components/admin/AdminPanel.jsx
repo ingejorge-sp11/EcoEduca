@@ -1,8 +1,33 @@
 import React, { useEffect, useState } from 'react';
-import { Shield, LayoutDashboard, AlertTriangle, Calendar, Newspaper, MapPin, CheckCircle, XCircle, Pencil, Save, X } from 'lucide-react';
-import { MapContainer, TileLayer, Circle, CircleMarker, Marker, Popup, useMap } from 'react-leaflet';
+import { Shield, LayoutDashboard, AlertTriangle, Calendar, Newspaper, MapPin, CheckCircle, XCircle, Pencil, Save, X, BarChart3 } from 'lucide-react';
+import { MapContainer, TileLayer, Circle, CircleMarker, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet.heat';
+import 'leaflet/dist/leaflet.css';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerIconRetina from 'leaflet/dist/images/marker-icon-2x.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+let DefaultIcon = L.icon({
+    iconUrl: markerIcon,
+    iconRetinaUrl: markerIconRetina,
+    shadowUrl: markerShadow,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+});
+L.Marker.prototype.options.icon = DefaultIcon;
+
+// Función real que captura clics en el mapa
+function LocationPicker({ onLocationSelected }) {
+    useMapEvents({
+        click(e) {
+            onLocationSelected(e.latlng);
+        },
+    });
+    return null;
+}
 
 const API_URL = '/api';
 
@@ -31,6 +56,8 @@ export default function AdminPanel() {
   const [newsForm, setNewsForm] = useState({ titulo: '', resumen: '', fecha_publicacion: '' });
   const [eventForm, setEventForm] = useState({ titulo: '', descripcion: '', fecha: '', hora: '', ubicacion: '' });
   const [mapForm, setMapForm] = useState({ nombre: '', descripcion: '', latitud: '', longitud: '', categoria: '' });
+  const [selectedMapPosition, setSelectedMapPosition] = useState(null);
+
   const [notif, setNotif] = useState(null);
   const [heatmapClusters, setHeatmapClusters] = useState([]);
   const [heatmapPoints, setHeatmapPoints] = useState([]);
@@ -42,10 +69,10 @@ export default function AdminPanel() {
   const getClusterColor = (scoreRaw) => {
     const score = typeof scoreRaw === 'number' ? scoreRaw : 0;
 
-    if (score >= 25) return '#b91c1c';  // muy alta urgencia (rojo)
-    if (score >= 15) return '#f97316';  // alta urgencia (naranja)
-    if (score >= 8)  return '#eab308';  // urgencia media (amarillo)
-    return '#22c55e';                   // urgencia baja (verde)
+    if (score >= 25) return '#b91c1c';  
+    if (score >= 15) return '#f97316';  
+    if (score >= 8)  return '#eab308';  
+    return '#22c55e';                   
   };
 
   const HeatmapLayer = ({ points }) => {
@@ -106,10 +133,10 @@ export default function AdminPanel() {
             maxOpacity: 0.9,
             minOpacity: 0.4,
             gradient: {
-              0.0: '#22c55e', // verde
-              0.4: '#eab308', // amarillo
-              0.7: '#f97316', // naranja
-              1.0: '#b91c1c', // rojo intenso
+              0.0: '#22c55e', 
+              0.4: '#eab308', 
+              0.7: '#f97316', 
+              1.0: '#b91c1c', 
             },
           }).addTo(map);
         } catch (e) {
@@ -172,9 +199,8 @@ export default function AdminPanel() {
         if (s.status === 200) {
           setIsAdmin(true);
           setStats(await s.json());
-          // Cargar colecciones
-          try { const r = await fetch(`${API_URL}/admin/reportes`, { headers }); if (r.ok) setReportes(await r.json()); } catch {}
-          try { const e = await fetch(`${API_URL}/eventos`); if (e.ok) setEventos(await e.json()); } catch {}
+          try { const r = await fetch(`${API_URL}/admin/reportes`, { headers }); if (r.ok) setReportes(await r.json()); } catch (err) { console.error(err); }
+          try { const e = await fetch(`${API_URL}/eventos`); if (e.ok) setEventos(await e.json()); } catch (err) { console.error(err); }
           try {
             const nAdmin = await fetch(`${API_URL}/admin/novedades`, { headers });
             if (nAdmin.ok) {
@@ -183,13 +209,14 @@ export default function AdminPanel() {
               const nPub = await fetch(`${API_URL}/novedades`);
               if (nPub.ok) setNovedades(await nPub.json());
             }
-          } catch {
+          } catch (err) {
+            console.error(err);
             try {
               const nPub = await fetch(`${API_URL}/novedades`);
               if (nPub.ok) setNovedades(await nPub.json());
-            } catch {}
+            } catch (errPub) { console.error(errPub); }
           }
-          try { const m = await fetch(`${API_URL}/mapa`); if (m.ok) setPuntos(await m.json()); } catch {}
+          try { const m = await fetch(`${API_URL}/mapa`); if (m.ok) setPuntos(await m.json()); } catch (err) { console.error(err); }
         } else if (s.status === 403) {
           setError('Acceso denegado: tu token no es admin.');
           setIsAdmin(false);
@@ -199,9 +226,12 @@ export default function AdminPanel() {
         try {
           const me = await fetch(`${API_URL}/admin/me`, { headers });
           if (me.ok) { const meJson = await me.json(); setIsAdmin(!!meJson.admin); }
-        } catch {}
-      } catch (e) {
+        } catch (err) {
+          console.error(err);
+        }
+      } catch (err) {
         setError('Error de conexión con el servidor.');
+        console.error(err);
       } finally {
         setLoading(false);
       }
@@ -639,6 +669,7 @@ export default function AdminPanel() {
         </div>
       )}
 
+      {/* --- SECCIÓN DEL MAPA (INTEGRACIÓN SOLICITADA) --- */}
       {activeTab === 'mapa' && (
         <div className="space-y-4">
           <BrowserTabs
@@ -653,41 +684,108 @@ export default function AdminPanel() {
           <div className="rounded-b-xl rounded-tr-xl border border-gray-300 bg-white shadow-sm p-4">
 
           {mapaSubTab === 'crear' && (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <button
-                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-medium transition-colors"
                 onClick={() => setShowCreatePointForm(v => !v)}
               >
                 {showCreatePointForm ? <X className="h-4 w-4"/> : <MapPin className="h-4 w-4"/>}
                 {showCreatePointForm ? 'Ocultar Formulario' : 'Nuevo Punto'}
               </button>
+              
               {showCreatePointForm && (
-                <div className="space-y-3">
-                  <h3 className="font-semibold flex items-center gap-2"><MapPin className="h-5 w-5 text-green-700"/> Datos del Punto</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {['nombre','descripcion','latitud','longitud','categoria'].map(k => (
-                      <input key={k} className="border p-2 rounded" placeholder={k} value={mapForm[k]} onChange={(e)=>setMapForm({ ...mapForm, [k]: e.target.value })} />
-                    ))}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start mt-2 border-t pt-4">
+                  {/* COLUMNA IZQUIERDA: FORMULARIO */}
+                  <div className="space-y-4 border border-gray-200 p-5 rounded-lg bg-gray-50 shadow-sm h-full">
+                    <h3 className="font-semibold flex items-center gap-2 text-lg text-gray-800">
+                        <MapPin className="h-5 w-5 text-green-700"/> Datos del Punto
+                    </h3>
+                    
+                    <div className="space-y-3 mt-4">
+                      <input className="w-full border border-gray-300 p-2.5 rounded shadow-sm focus:ring-1 focus:ring-green-500 outline-none" placeholder="Nombre (Ej. Bebederos Módulo M)" value={mapForm.nombre} onChange={(e)=>setMapForm({ ...mapForm, nombre: e.target.value })} />
+                      <input className="w-full border border-gray-300 p-2.5 rounded shadow-sm focus:ring-1 focus:ring-green-500 outline-none" placeholder="Descripción breve" value={mapForm.descripcion} onChange={(e)=>setMapForm({ ...mapForm, descripcion: e.target.value })} />
+                      
+                      <select className="w-full border border-gray-300 p-2.5 rounded shadow-sm focus:ring-1 focus:ring-green-500 outline-none bg-white text-gray-700" value={mapForm.categoria} onChange={(e)=>setMapForm({ ...mapForm, categoria: e.target.value })}>
+                          <option value="">Selecciona una categoría...</option>
+                          <option value="reciclaje">Punto de Reciclaje</option>
+                          <option value="agua">Estación de Agua</option>
+                          <option value="verde">Área Verde</option>
+                          <option value="interes">Área de interés</option>
+                          <option value="biblioteca">Biblioteca</option>
+                          <option value="comedor">Comedor/Cafetería</option>
+                          <option value="banos">Baños</option>
+                      </select>
+
+                      {/* Coordenadas (SOLO LECTURA) */}
+                      <div className="grid grid-cols-2 gap-3 mt-2">
+                         <div>
+                            <label className="text-xs text-gray-500 font-semibold uppercase block mb-1">Latitud</label>
+                            <input className="w-full border border-gray-300 p-2.5 rounded bg-gray-200 text-gray-500 cursor-not-allowed font-mono text-sm" placeholder="Pendiente..." readOnly value={mapForm.latitud} />
+                         </div>
+                         <div>
+                            <label className="text-xs text-gray-500 font-semibold uppercase block mb-1">Longitud</label>
+                            <input className="w-full border border-gray-300 p-2.5 rounded bg-gray-200 text-gray-500 cursor-not-allowed font-mono text-sm" placeholder="Pendiente..." readOnly value={mapForm.longitud} />
+                         </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2 pt-4 border-t border-gray-200 mt-4">
+                      <button className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded font-medium inline-flex items-center gap-2 transition-colors flex-1 justify-center" onClick={async ()=>{
+                        if(!mapForm.latitud || !mapForm.longitud) {
+                            alert("Por favor, haz clic en el mapa de la derecha para seleccionar la ubicación exacta.");
+                            return;
+                        }
+                        const token = localStorage.getItem('token');
+                        const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type':'application/json' };
+                        const payload = { ...mapForm, latitud: parseFloat(mapForm.latitud), longitud: parseFloat(mapForm.longitud) };
+                        const res = await fetch(`${API_URL}/admin/mapa`, { method:'POST', headers, body: JSON.stringify(payload) });
+                        if (res.ok) {
+                          setNotif({ type:'success', msg:'Punto creado exitosamente' });
+                          const m = await fetch(`${API_URL}/mapa`);
+                          if (m.ok) setPuntos(await m.json());
+                          setMapForm({ nombre:'', descripcion:'', latitud:'', longitud:'', categoria:'' });
+                          setSelectedMapPosition(null);
+                          setShowCreatePointForm(false);
+                          setMapaSubTab('listar');
+                        } else setNotif({ type:'error', msg:'Error creando punto' });
+                      }}>
+                        <Save className="h-4 w-4"/> Guardar Punto
+                      </button>
+                      <button className="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors" onClick={()=>{ 
+                          setShowCreatePointForm(false); 
+                          setSelectedMapPosition(null);
+                          setMapForm({ nombre:'', descripcion:'', latitud:'', longitud:'', categoria:'' });
+                      }}>
+                        Cancelar
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button className="px-4 py-2 bg-green-600 text-white rounded inline-flex items-center gap-2" onClick={async ()=>{
-                      const token = localStorage.getItem('token');
-                      const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type':'application/json' };
-                      const res = await fetch(`${API_URL}/admin/mapa`, { method:'POST', headers, body: JSON.stringify(mapForm) });
-                      if (res.ok) {
-                        setNotif({ type:'success', msg:'Punto creado' });
-                        const m = await fetch(`${API_URL}/mapa`);
-                        if (m.ok) setPuntos(await m.json());
-                        setMapForm({ nombre:'', descripcion:'', latitud:'', longitud:'', categoria:'' });
-                        setShowCreatePointForm(false);
-                        setMapaSubTab('listar');
-                      } else setNotif({ type:'error', msg:'Error creando punto' });
-                    }}>
-                      <Save className="h-4 w-4"/> Guardar
-                    </button>
-                    <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded" onClick={()=>{ setShowCreatePointForm(false); }}>
-                      Cancelar
-                    </button>
+
+                  {/* COLUMNA DERECHA: MAPA INTERACTIVO */}
+                  <div className="border border-gray-300 rounded-lg bg-gray-50 p-2 h-full min-h-[450px] relative shadow-inner">
+                      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[400] bg-white/95 px-4 py-2 rounded shadow-md text-sm font-semibold flex items-center gap-2 text-gray-800 border border-gray-200 w-max pointer-events-none">
+                          <MapPin className="text-red-500 h-4 w-4"/> Haz clic en el mapa para establecer el punto
+                      </div>
+                      <div className="w-full h-full min-h-[450px] rounded overflow-hidden z-0 border border-gray-200 relative">
+                        <MapContainer center={[20.6555, -103.3255]} zoom={16} style={{ height: '100%', width: '100%', minHeight: '450px', zIndex: 1 }}>
+                            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
+                            
+                            {/* Componente que escucha el clic */}
+                            <LocationPicker onLocationSelected={(latlng) => {
+                                setSelectedMapPosition(latlng);
+                                setMapForm({ ...mapForm, latitud: String(latlng.lat), longitud: String(latlng.lng) });
+                            }} />
+                            
+                            {/* Marcador del punto recién seleccionado */}
+                            {selectedMapPosition && <Marker position={selectedMapPosition}><Popup><span className="font-bold text-green-700">Nueva Ubicación</span></Popup></Marker>}
+                            
+                            {/* Puntos existentes como referencia */}
+                            {puntos.map(p => {
+                                if (!p.latitud || !p.longitud) return null;
+                                return <Marker key={p.id} position={[p.latitud, p.longitud]}><Popup><span className="text-gray-500 text-xs">Existente:</span><br/><b>{p.nombre}</b></Popup></Marker>;
+                            })}
+                        </MapContainer>
+                      </div>
                   </div>
                 </div>
               )}
