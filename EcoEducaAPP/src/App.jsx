@@ -9,12 +9,23 @@ import { EventosView, EventoDetallesView } from "./components/eventos/Eventos";
 import NoticiaCarousel from "./components/NoticiaCarousel";
 import GamificationDashboard from "./components/gamification/GamificationDashboard";
 import '../css/carousel-noticias.css';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents} from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents} from 'react-leaflet';
+import L from 'leaflet'; // Agregado para solucionar error de L.icon
 import JuegoReciclajeAnimado from "./components/juegos/JuegoReciclajeAnimado";
 import { registrarActividadUsuario, limpiarActividadUsuario } from "./utils/userActivityRecommender";
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001/api';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+// --- NUEVO COMPONENTE: Capturador de clics en el mapa ---
+function LocationPicker({ onLocationSelected }) {
+    useMapEvents({
+        click(e) {
+            onLocationSelected(e.latlng);
+        },
+    });
+    return null;
+}
+
 //BARRA DE NAVEGACION (ICONOS)
 const Header = ({ user, onLogout, onLoginClick, onRegisterClick, onNavigate }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -259,7 +270,7 @@ const RegisterForm = ({ onSwitchToLogin }) => {
             </div>
             <div>
                 <label className="block text-sm font-medium text-gray-700">Código de Estudiante</label>
-                <input type="text" name="codigo" onChange={handleChange} placeholder="Ej. 217XXXXXX" required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"/>
+                <input type="text" name="codigo_estudiante" onChange={handleChange} placeholder="Ej. 217XXXXXX" required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"/>
             </div>
             <div>
                 <label className="block text-sm font-medium text-gray-700">Contraseña</label>
@@ -349,17 +360,36 @@ const MapaView = () => {
         </div>
     );
 };
-/** COMPONENTE: ReportesView
+
+/** COMPONENTE: ReportesView (REDISEÑADO)
  * -Formulario para que los usuarios reporten incidentes ambientales
- * -Requiere que el usuario inicie sesión
+ * -Incorpora mapa de selección interactiva
  */
 const ReportesView = ({ user, onLoginRequerido }) => {
     const [form, setForm] = useState({ titulo: '', tipo: 'fuga', ubicacion: '', descripcion: '' });
     const [msg, setMsg] = useState(null);
+    const [selectedPosition, setSelectedPosition] = useState(null); // Nuevo estado para el marcador
+
+    // Definimos el ícono rojo para el reporte seleccionado
+    const iconRojo = L.icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.4/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+    });
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if(!user) return onLoginRequerido();
+        
+        // Validación extra: Asegurarnos de que tenga ubicación
+        if(!form.ubicacion) {
+            setMsg({txt: 'Por favor selecciona la ubicación en el mapa o escríbela.', type: 'error'});
+            return;
+        }
+
         try {
             const res = await fetch(`${API_URL}/reportes`, {
                 method: 'POST',
@@ -367,8 +397,11 @@ const ReportesView = ({ user, onLoginRequerido }) => {
                 body: JSON.stringify({...form, usuario_id: user.id})
             });
             if(res.ok) {
-                setMsg({txt:'Reporte enviado', type:'success'});
+                setMsg({txt:'¡Reporte enviado exitosamente!', type:'success'});
+                // Limpiamos el formulario y el mapa
                 setForm({ titulo: '', tipo: 'fuga', ubicacion: '', descripcion: '' });
+                setSelectedPosition(null);
+                
                 // Marcar misión de reporte como completada en localStorage y sumar puntos
                 let progreso = JSON.parse(localStorage.getItem('misiones_diarias')) || {};
                 if (!progreso.reporte) {
@@ -377,64 +410,122 @@ const ReportesView = ({ user, onLoginRequerido }) => {
                   localStorage.setItem('misiones_diarias', JSON.stringify(progreso));
                 }
             } else {
-                setMsg({txt:'Error', type:'error'});
+                setMsg({txt:'Error al enviar el reporte', type:'error'});
             }
         } catch {
-            setMsg({txt:'Error de red', type:'error'});
+            setMsg({txt:'Error de conexión. Intenta más tarde.', type:'error'});
         }
     };
 
+    // Función que recibe las coordenadas al hacer clic en el mapa
+    const handleMapClick = (latlng) => {
+        setSelectedPosition(latlng);
+        // Formateamos las coordenadas a String para enviarlas al backend (que espera texto)
+        setForm({ ...form, ubicacion: `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}` });
+    };
+
     if(!user) return (
-        <div className="text-center py-20">
-            <h2 className="text-2xl font-bold mb-4">Inicia sesión para reportar</h2>
-            <button onClick={onLoginRequerido} className="bg-green-600 text-white px-6 py-2 rounded">Entrar</button>
+        <div className="text-center py-20 animate-fade-in-up">
+            <h2 className="text-2xl font-bold mb-4 text-gray-800">Inicia sesión para reportar un incidente</h2>
+            <button onClick={onLoginRequerido} className="bg-green-600 hover:bg-green-700 transition-colors text-white px-8 py-3 rounded-lg font-bold shadow-md">
+                Entrar
+            </button>
         </div>
     );
 
-    //FORMULARIO DE REPORTES
     return (
-        <div className="max-w-xl mx-auto py-10 px-4">
-            <h2 className="text-2xl font-bold mb-6 text-center flex items-center justify-center gap-2">
-                <AlertTriangle className="text-orange-500"/> Reportar Incidente
+        <div className="max-w-6xl mx-auto py-10 px-4 animate-fade-in-up">
+            <h2 className="text-3xl font-extrabold mb-8 text-center flex items-center justify-center gap-3 text-gray-800">
+                <AlertTriangle className="text-orange-500 h-8 w-8"/> Reportar Incidente
             </h2>
-            <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow space-y-4 border">
-                {msg && <Notification message={msg.txt} type={msg.type}/>}
-                <input
-                    placeholder="Título"
-                    className="w-full border p-2 rounded"
-                    required
-                    value={form.titulo}
-                    onChange={e=>setForm({...form, titulo: e.target.value})}
-                />
-                <div className="grid grid-cols-2 gap-4">
-                    <select
-                        className="border p-2 rounded"
-                        value={form.tipo}
-                        onChange={e=>setForm({...form, tipo: e.target.value})}
-                    >
-                        <option value="fuga">Fuga</option>
-                        <option value="basura">Basura</option>
-                        <option value="electricidad">Electricidad</option>
-                        <option value="otro">Otro</option>
-                    </select>
-                    <input
-                        placeholder="Ubicación"
-                        className="border p-2 rounded"
-                        required
-                        value={form.ubicacion}
-                        onChange={e=>setForm({...form, ubicacion: e.target.value})}
-                    />
+            
+            {/* Grid principal: 1 Columna en Móvil, 2 Columnas en Desktop */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                
+                {/* COLUMNA IZQUIERDA: Formulario de Reporte */}
+                <form onSubmit={handleSubmit} className="bg-white p-7 rounded-2xl shadow-xl border border-gray-100 flex flex-col space-y-5 h-full">
+                    {msg && <Notification message={msg.txt} type={msg.type}/>}
+                    
+                    <div className="space-y-1">
+                        <label className="text-sm font-semibold text-gray-700">Título del incidente</label>
+                        <input
+                            placeholder="Ej. Fuga de agua en bebederos del Módulo M"
+                            className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-green-200 outline-none transition-all"
+                            required
+                            value={form.titulo}
+                            onChange={e=>setForm({...form, titulo: e.target.value})}
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-sm font-semibold text-gray-700">Tipo</label>
+                            <select
+                                className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-green-200 outline-none bg-white text-gray-700 transition-all"
+                                value={form.tipo}
+                                onChange={e=>setForm({...form, tipo: e.target.value})}
+                            >
+                                <option value="fuga">Fuga de Agua</option>
+                                <option value="basura">Acumulación de Basura</option>
+                                <option value="electricidad">Fallo Eléctrico</option>
+                                <option value="otro">Otro incidente</option>
+                            </select>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-sm font-semibold text-gray-700">Ubicación</label>
+                            <input
+                                placeholder="Escribe o haz clic en el mapa"
+                                className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-green-200 outline-none transition-all"
+                                required
+                                value={form.ubicacion}
+                                onChange={e=>setForm({...form, ubicacion: e.target.value})}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-1 flex-1 flex flex-col">
+                        <label className="text-sm font-semibold text-gray-700">Descripción detallada</label>
+                        <textarea
+                            placeholder="Describe el problema para que el equipo de mantenimiento pueda localizarlo y solucionarlo rápidamente..."
+                            rows="4"
+                            className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-green-200 outline-none flex-1 resize-none transition-all min-h-[120px]"
+                            required
+                            value={form.descripcion}
+                            onChange={e=>setForm({...form, descripcion: e.target.value})}
+                        />
+                    </div>
+
+                    <button type="submit" className="bg-green-600 hover:bg-green-700 text-white w-full py-3.5 rounded-lg font-bold shadow-md flex justify-center items-center gap-2 transition-all mt-4">
+                        <Send className="w-5 h-5"/> Enviar Reporte
+                    </button>
+                </form>
+
+                {/* COLUMNA DERECHA: Mapa Interactivo */}
+                <div className="bg-white p-2 rounded-2xl shadow-xl border border-gray-100 relative min-h-[500px] h-full flex flex-col">
+                     {/* Etiqueta flotante indicativa */}
+                     <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[400] bg-white/95 backdrop-blur-md px-5 py-2.5 rounded-full shadow-lg border border-gray-100 flex items-center gap-2 w-max pointer-events-none">
+                        <MapPin className="text-orange-500 h-5 w-5 animate-bounce"/>
+                        <span className="text-sm font-bold text-gray-800">Haz clic en el mapa para ubicar el incidente</span>
+                    </div>
+                    
+                    {/* Contenedor del Mapa */}
+                    <div className="w-full h-full min-h-[500px] rounded-xl overflow-hidden z-0 border border-gray-200 relative">
+                        <MapContainer center={[20.6555, -103.3255]} zoom={16} style={{ height: '100%', width: '100%', minHeight: '500px', zIndex: 1 }}>
+                            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
+                            
+                            {/* Componente que captura el clic */}
+                            <LocationPicker onLocationSelected={handleMapClick} />
+                            
+                            {/* Dibuja el marcador rojo si el usuario ya hizo clic */}
+                            {selectedPosition && (
+                                <Marker position={selectedPosition} icon={iconRojo}>
+                                    <Popup><span className="font-bold text-orange-600">Lugar del Incidente</span></Popup>
+                                </Marker>
+                            )}
+                        </MapContainer>
+                    </div>
                 </div>
-                <textarea
-                    placeholder="Descripción"
-                    rows="3"
-                    className="w-full border p-2 rounded"
-                    required
-                    value={form.descripcion}
-                    onChange={e=>setForm({...form, descripcion: e.target.value})}
-                />
-                <button className="bg-green-600 text-white w-full py-2 rounded font-bold">Enviar</button>
-            </form>
+            </div>
         </div>
     );
 };
@@ -499,12 +590,12 @@ function App() {
 
      // EFECTO: Ajuste de mapa 
     useEffect(() => {
-        if (currentView === 'mapa') {
+        if (currentView === 'mapa' || currentView === 'reportes') {
             setTimeout(() => {
-                const map = document.querySelector('.leaflet-container');
-                if (map) {
+                const maps = document.querySelectorAll('.leaflet-container');
+                maps.forEach(map => {
                     window.dispatchEvent(new Event('resize'));
-                }
+                });
             }, 200);
         }
     }, [currentView]);   
@@ -593,6 +684,7 @@ function App() {
         };
         window.addEventListener('ecoedu:navigate', handler);
         return () => window.removeEventListener('ecoedu:navigate', handler);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     /**
@@ -607,7 +699,7 @@ function App() {
                             return user ? (
                                 <JuegoReciclajeAnimado />
                             ) : (
-                                <div className="p-8 text-center">
+                                <div className="p-8 text-center animate-fade-in-up">
                                     <h2 className="text-2xl font-bold mb-4"> Debes iniciar sesión primero</h2>
                                     <button onClick={openLoginModal} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
                                         Iniciar Sesión
@@ -627,7 +719,7 @@ function App() {
                 return user ? (
                     <GamificationDashboard user={user} />
                 ) : (
-                    <div className="p-8 text-center">
+                    <div className="p-8 text-center animate-fade-in-up">
                         <h2 className="text-2xl font-bold mb-4"> Debes iniciar sesión primero</h2>
                         <button onClick={openLoginModal} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
                             Iniciar Sesión
@@ -642,7 +734,7 @@ function App() {
                 return user ? (
                     <JuegoResiduos />
                 ) : (
-                    <div className="p-8 text-center">
+                    <div className="p-8 text-center animate-fade-in-up">
                         <h2 className="text-2xl font-bold mb-4"> Debes iniciar sesión primero</h2>
                         <button onClick={openLoginModal} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
                             Iniciar Sesión
@@ -654,7 +746,7 @@ function App() {
                 return user && user.rol === 'admin' ? (
                     <AdminPanel />
                 ) : (
-                    <div className="p-8 text-center">
+                    <div className="p-8 text-center animate-fade-in-up">
                         <h2 className="text-2xl font-bold mb-4">Acceso denegado</h2>
                         <p className="text-gray-600">Esta sección es exclusiva para administradores.</p>
                     </div>
@@ -701,4 +793,3 @@ function App() {
 }
 
 export default App;
-
