@@ -153,7 +153,7 @@ app.get('/api/v1/leaderboard/top6', authenticateToken, async (req, res) => {
       puntuacion: u.puntuacion || 0,
       puntuacion_segundo: u.puntuacion_segundo || 0,
       nivel: u.nivel || 0,
-      total: (u.puntuacion || 0) + (u.puntuacion_segundo || 0)
+      total: (u.puntuacion || 0) + (u.puntuacion_segundo || 0) + (u.nivel || 0)
     }));
 
     lista.sort((a, b) => b.total - a.total);
