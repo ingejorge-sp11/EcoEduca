@@ -280,17 +280,33 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Endpoint para obtener un consejo aleatorio
+// Endpoint para obtener un consejo aleatorio usando Supabase
 app.get('/api/consejo-aleatorio', async (req, res) => {
   try {
-    const result = await pool.query('SELECT descripcion FROM consejos ORDER BY RANDOM() LIMIT 1');
-    if (result.rows.length > 0) {
-      res.json({ descripcion: result.rows[0].descripcion });
+    if (!supabase) {
+      return res.status(500).json({ descripcion: 'Supabase no está configurado.' });
+    }
+
+    // 1. Obtenemos todos los consejos
+    const { data, error } = await supabase
+      .from('consejos')
+      .select('descripcion');
+
+    if (error) {
+      console.error('Error de Supabase al obtener consejos:', error.message);
+      return res.status(500).json({ descripcion: "Error al obtener consejo." });
+    }
+
+    // 2. Si hay datos, elegimos uno al azar con Javascript
+    if (data && data.length > 0) {
+      const indiceAleatorio = Math.floor(Math.random() * data.length);
+      res.json({ descripcion: data[indiceAleatorio].descripcion });
     } else {
       res.status(404).json({ descripcion: "No hay consejos disponibles." });
     }
+
   } catch (error) {
-    console.error('Error al obtener consejo:', error);
+    console.error('Error interno al obtener consejo:', error);
     res.status(500).json({ descripcion: "Error al obtener consejo." });
   }
 });
