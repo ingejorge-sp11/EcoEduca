@@ -85,7 +85,7 @@ export default function JuegoResiduos() {
       if (token) {
         try {
           // Intentar primero el endpoint estable /v1/users/profile
-          const profileResponse = await fetch('/api/v1/users/profile', {
+          const profileResponse = await fetch('${API_URL}/v1/users/profile', {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           if (profileResponse.ok) {
@@ -95,7 +95,7 @@ export default function JuegoResiduos() {
             setMejorPuntuacion(profile.puntuacion || 0);
             } else {
             // Fallback a /usuarios/me solo si el perfil falla
-            const userResponse = await fetch('/api/usuarios/me', {
+            const userResponse = await fetch('${API_URL}/usuarios/me', {
               headers: { 'Authorization': `Bearer ${token}` }
             });
             if (userResponse.ok) {
@@ -144,7 +144,7 @@ export default function JuegoResiduos() {
   // Obtener consejo cuando termina el juego
   useEffect(() => {
     if (gameOver) {
-      fetch('/api/consejo-aleatorio')
+      fetch('${API_URL}/consejo-aleatorio')
         .then(res => res.json())
         .then(data => setConsejo(data.descripcion || ""))
         .catch(() => setConsejo(""));
@@ -244,7 +244,7 @@ export default function JuegoResiduos() {
     if (!token) return;
 
     try {
-      const response = await fetch('/api/usuarios/me/guardar-mejor-puntaje', {
+      const response = await fetch('${API_URL}/usuarios/me/guardar-mejor-puntaje', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
