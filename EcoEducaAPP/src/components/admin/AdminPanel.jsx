@@ -19,7 +19,7 @@ let DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-// Función real que captura clics en el mapa
+// Función real captura clics en el mapa
 function LocationPicker({ onLocationSelected }) {
     useMapEvents({
         click(e) {
@@ -669,7 +669,7 @@ export default function AdminPanel() {
         </div>
       )}
 
-      {/* --- SECCIÓN DEL MAPA (INTEGRACIÓN SOLICITADA) --- */}
+      {/* --- SECCIÓN DEL MAPA  --- */}
       {activeTab === 'mapa' && (
         <div className="space-y-4">
           <BrowserTabs
