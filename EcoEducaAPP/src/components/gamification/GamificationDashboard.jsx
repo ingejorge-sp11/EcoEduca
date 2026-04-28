@@ -5,6 +5,7 @@ import MisionesDiarias from "./MisionesDiarias";
 import MisionesTemporada from "./MisionesTemporada";
 import Leaderboard from "./Leaderboard";
 import { obtenerTopActividadesUsuario } from "../../utils/userActivityRecommender";
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3002/api';
 
 function calcularNivelPorPuntos(puntos) {
   if (puntos >= 700) return "Legendario";
