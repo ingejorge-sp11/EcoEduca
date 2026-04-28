@@ -5,6 +5,7 @@ import naranja from '../assets/objetos/naranja.png';
 import huevo from '../assets/objetos/huevo.png';
 import paisaje2 from '../assets/paisaje2.0.jpg';
 import ardillaImg from '../assets/ardilla.png';
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3002/api';
 
 export default function JuegoResiduos() {
 	const [consejo, setConsejo] = useState("");
