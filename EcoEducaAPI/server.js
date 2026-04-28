@@ -140,7 +140,7 @@ app.get('/api/v1/leaderboard/top6', authenticateToken, async (req, res) => {
 
     const { data: usuarios, error } = await supabase
       .from('usuarios')
-      .select('id, nombre, puntuacion, puntuacion_segundo');
+      .select('id, nombre, puntuacion, puntuacion_segundo, nivel');
 
     if (error) {
       console.error('Error al obtener usuarios para leaderboard (Supabase):', error.message);
@@ -152,6 +152,7 @@ app.get('/api/v1/leaderboard/top6', authenticateToken, async (req, res) => {
       nombre: u.nombre,
       puntuacion: u.puntuacion || 0,
       puntuacion_segundo: u.puntuacion_segundo || 0,
+      nivel: u.nivel || 0,
       total: (u.puntuacion || 0) + (u.puntuacion_segundo || 0)
     }));
 
