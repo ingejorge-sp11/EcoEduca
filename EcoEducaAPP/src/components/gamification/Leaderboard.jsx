@@ -82,13 +82,13 @@ const Leaderboard = ({ user }) => {
                     </div>
                     <div className="flex-shrink-0 text-right">
                       <p className="text-xl font-black text-green-600">
-                        {(entrada.total ?? (entrada.puntuacion + (entrada.puntuacion_segundo || 0))).toLocaleString()}
+                        {(entrada.total ?? (entrada.puntuacion + (entrada.puntuacion_segundo || 0) + (entrada.nivel || 0))).toLocaleString()}
                       </p>
                     </div>
                   </div>
                   <div className="mt-2 bg-gray-200 rounded-full h-1 overflow-hidden">
                     <div
-                      style={{ width: `${(((entrada.total ?? (entrada.puntuacion + (entrada.puntuacion_segundo || 0))) / (usuarios[0].total ?? (usuarios[0].puntuacion + (usuarios[0].puntuacion_segundo || 0)))) * 100)}%` }}
+                      style={{ width: `${(((entrada.total ?? (entrada.puntuacion + (entrada.puntuacion_segundo || 0) + (entrada.nivel || 0))) / (usuarios[0].total ?? (usuarios[0].puntuacion + (usuarios[0].puntuacion_segundo || 0)))) * 100)}%` }}
                       className={`h-full ${
                         entrada.id === user?.id
                           ? "bg-gradient-to-r from-green-400 to-blue-500"
