@@ -29,7 +29,7 @@ function LocationPicker({ onLocationSelected }) {
     return null;
 }
 
-const API_URL = '/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3002/api';
 
 export default function AdminPanel() {
   const [isAdmin, setIsAdmin] = useState(false);
