@@ -1,4 +1,3 @@
-//IMPORTACIONES
 import React, { useState, useEffect } from 'react';
 import { TreePine, Calendar, MapPin, LogIn, UserPlus, X, Menu, Ticket, User, LogOut, Zap, AlertTriangle, Send, Shield, CheckCircle, Clock, Plus, Trash2, LayoutDashboard, Newspaper, Gamepad2, Map } from 'lucide-react';
 import JuegosSection from "./components/JuegosSection";
@@ -10,13 +9,13 @@ import NoticiaCarousel from "./components/NoticiaCarousel";
 import GamificationDashboard from "./components/gamification/GamificationDashboard";
 import '../css/carousel-noticias.css';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents} from 'react-leaflet';
-import L from 'leaflet'; // Agregado para solucionar error de L.icon
+import L from 'leaflet'; 
 import JuegoReciclajeAnimado from "./components/juegos/JuegoReciclajeAnimado";
 import { registrarActividadUsuario, limpiarActividadUsuario } from "./utils/userActivityRecommender";
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3002/api';
 
-// --- NUEVO COMPONENTE: Capturador de clics en el mapa ---
+// --- Capturador de clics en el mapa ---
 function LocationPicker({ onLocationSelected }) {
     useMapEvents({
         click(e) {
@@ -154,7 +153,7 @@ const Header = ({ user, onLogout, onLoginClick, onRegisterClick, onNavigate }) =
     );
 };
 
-/** COMPONENTE: MODAL
+/** MODAL
  * -Muestra ventana emergente sin salirse de la pagina
  */
 const Modal = ({ isOpen, onClose, title, children }) => {
@@ -175,7 +174,7 @@ const Modal = ({ isOpen, onClose, title, children }) => {
 };
 
 /**
- * COMPONENTE: Notification
+ * Notification
  Indica exito o error em forms al usuario
  */
 const Notification = ({ message, type }) => {
@@ -186,7 +185,7 @@ const Notification = ({ message, type }) => {
 };
 
 /**
- * COMPONENTE: LoginForm
+ * LoginForm
     * Formulario para que los estudiantes inicien sesion 
     * -Valida coodigo y contraseña
     * -Envia datos al servidor (/api/login)
@@ -219,7 +218,7 @@ const LoginForm = ({ onSwitchToRegister, onLoginSuccess }) => {
 };
 
 /**
- * COMPONENTE: RegisterForm
+ * RegisterForm
  * Formulario para que los nuevos estudiantes se registren
  * - Valida nombre, apellido, código y contraseña
  * - Envía datos al servidor (/api/register)
@@ -296,7 +295,7 @@ const HeroSection = () => (
     </section>
 );
 
-/**COMPONENTES: Mapa view
+/**Mapa view
  * - Muestra mapa interactivo con punto de interes ambiental
  */
 const MapaView = () => {
@@ -361,14 +360,14 @@ const MapaView = () => {
     );
 };
 
-/** COMPONENTE: ReportesView (REDISEÑADO)
+/**  ReportesView 
  * -Formulario para que los usuarios reporten incidentes ambientales
  * -Incorpora mapa de selección interactiva
  */
 const ReportesView = ({ user, onLoginRequerido }) => {
     const [form, setForm] = useState({ titulo: '', tipo: 'fuga', ubicacion: '', descripcion: '' });
     const [msg, setMsg] = useState(null);
-    const [selectedPosition, setSelectedPosition] = useState(null); // Nuevo estado para el marcador
+    const [selectedPosition, setSelectedPosition] = useState(null);
 
     // Definimos el ícono rojo para el reporte seleccionado
     const iconRojo = L.icon({
@@ -420,7 +419,7 @@ const ReportesView = ({ user, onLoginRequerido }) => {
     // Función que recibe las coordenadas al hacer clic en el mapa
     const handleMapClick = (latlng) => {
         setSelectedPosition(latlng);
-        // Formateamos las coordenadas a String para enviarlas al backend (que espera texto)
+        // Formateamos las coordenadas a String para enviarlas al backend 
         setForm({ ...form, ubicacion: `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}` });
     };
 
@@ -530,7 +529,7 @@ const ReportesView = ({ user, onLoginRequerido }) => {
     );
 };
 
-//COMPONENTES APP: CONTROLA SECCION A MOSTRARSE
+
 function App() {
     const [currentView, setCurrentView] = useState('inicio');
     const [selectedEvento, setSelectedEvento] = useState(null);
@@ -542,12 +541,7 @@ function App() {
     const [user, setUser]  = useState(null);
     
     
-    /**
-     * EFECTO: useEffect Principal
-     * Se ejecuta una sola vez al cargar la aplicación
-     * - Carga el usuario guardado en localStorage si existe
-     * - Obtiene datos iniciales de la API (novedades, eventos, calendario)
-     */
+    
     useEffect(() => {
         // Cargar usuario guardado en localStorage
         const savedUser = localStorage.getItem("user");
@@ -612,18 +606,13 @@ function App() {
         // Guardar el token para futuras llamadas autenticadas
         if (data.token) {
             localStorage.setItem("token", data.token);
-            console.log(' Token guardado:', data.token);
-            console.log('Token en localStorage:', localStorage.getItem('token'));
+            //console.log(' Token guardado:', data.token);
+            //console.log('Token en localStorage:', localStorage.getItem('token'));
         }
         closeModal();
     };
 
-    /**
-     * FUNCIÓN: handleLogout
-     * Limpia la sesión del usuario
-     * - Elimina usuario del estado
-     * - Borra usuario y token de localStorage
-     */
+    
     const handleLogout = () => {
         setUser(null);
         localStorage.removeItem("user");
@@ -631,30 +620,19 @@ function App() {
         limpiarActividadUsuario();
     };
 
-    /**
-     * FUNCIÓN: openLoginModal
-     * Abre el modal de login
-     * - Cierra el modal de registro si está abierto
-     */
+   
     const openLoginModal = () => {
         setIsRegisterOpen(false);
         setIsLoginOpen(true);
     };
 
-    /**
-     * FUNCIÓN: openRegisterModal
-     * Abre el modal de registro
-     * - Cierra el modal de login si está abierto
-     */
+    
     const openRegisterModal = () => {
         setIsLoginOpen(false);
         setIsRegisterOpen(true);
     };
 
-    /**
-     * FUNCIÓN: closeModal
-     * Cierra ambos modales (login y registro)
-     */
+   
     const closeModal = () => {
         setIsLoginOpen(false);
         setIsRegisterOpen(false);
@@ -674,7 +652,7 @@ function App() {
         registrarVista(view);
     };
 
-    // Escuchar navegaciones desde otros componentes (por ejemplo, recomendaciones)
+    // Escuchar navegaciones desde otros componentes 
     useEffect(() => {
         const handler = (event) => {
             const view = event.detail;
