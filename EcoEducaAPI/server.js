@@ -1,25 +1,25 @@
 import express from 'express';
-import pg from 'pg'; // Cliente de PostgreSQL
-import dotenv from 'dotenv'; //Carga variables de entorno desde un archivo
-import bcrypt from 'bcrypt'; // Librería para cifrar/hashear contraseñas
-import jwt from 'jsonwebtoken';//autenticación basada en tokens
-import cors from 'cors'; //Middleware que habilita CORS
-import axios from 'axios'; //peticiones a otros servicios/APIs externas
+import pg from 'pg'; 
+import dotenv from 'dotenv'; 
+import bcrypt from 'bcrypt'; 
+import jwt from 'jsonwebtoken';
+import cors from 'cors'; 
+import axios from 'axios'; 
 import dns from 'dns';
 import { supabase } from './supabaseClient.js';
 
 dns.setDefaultResultOrder('ipv4first');
 
-// Cargar las variables de entorno desde el archivo .env
+
 dotenv.config();
 
 // Clave secreta para firmar y verificar JWT
 const jwtSecret = process.env.JWT_SECRET || 'dev_jwt_secret_change_me';
 
 // Configuración de JWT y puntos
-const PUNTOS_POR_ACIERTO = Number(process.env.PUNTOS_POR_ACIERTO) || 10; //Define una constante de puntos por acierto para el sistema de gamificación.
+const PUNTOS_POR_ACIERTO = Number(process.env.PUNTOS_POR_ACIERTO) || 10; 
 
-// Inicializar la aplicación de Express
+
 const app = express();
 const port = process.env.PORT || 3002;
 const allowedOrigins = (process.env.CORS_ORIGIN || '')
@@ -37,7 +37,7 @@ app.use(cors({
 })); // Habilita CORS para permitir peticiones desde el frontend
 app.use(express.json()); // Permite al servidor entender JSON en las peticiones
 
-// Configuración de la conexión a la base de datos PostgreSQL 
+
 const pool = new pg.Pool({
   user: process.env.DB_USER,
   host: process.env.DB_HOST,
@@ -46,7 +46,7 @@ const pool = new pg.Pool({
   port: process.env.DB_PORT
 });
 
-// Verificamos la conexión a la base de datos al iniciar (no bloqueante)
+
 pool.connect((err, client, release) => {
   if (err) {
     console.error('Error al conectar con la base de datos PostgreSQL (pool):', err.stack);
@@ -62,7 +62,7 @@ pool.connect((err, client, release) => {
   });
 });
 
-// Endpoint de prueba para verificar conexión con Supabase vía REST
+
 app.get('/api/supabase/health', async (req, res) => {
   try {
     if (!supabase) {
@@ -111,7 +111,7 @@ const verifyAdmin = (req, res, next) => {
   });
 };
 // --- RUTAS DE LA API ---
-// Obtener datos de un usuario por ID 
+
 app.get('/api/usuarios/:id', async (req, res) => {
   const { id } = req.params;
   try {
@@ -128,7 +128,7 @@ app.get('/api/usuarios/:id', async (req, res) => {
   }
 });
 
-// Tabla de posiciones, obtiene la puntuacion combinada de ambos juegos y los ordena descendentemente, limitando al top 6 (Supabase)
+// Tabla de posiciones, obtiene la puntuacion combinada de ambos juegos y los ordena descendentemente, limitando al top 6
 //Despues de eso, te dice cual es la posicion que ocupa el usuario 
 app.get('/api/v1/leaderboard/top6', authenticateToken, async (req, res) => {
   try {
@@ -168,13 +168,13 @@ app.get('/api/v1/leaderboard/top6', authenticateToken, async (req, res) => {
   }
 });
 
-// Validar año, lo emplea varios elementos que reciben de paraemtro el año, y aseguran que contiene 4 digitos y dentro del rango razonable
+
 function validarAño(año) {
   const regex = /^\d{4}$/;
   return regex.test(año) && año >= 2020 && año <= 2100;
 }
 
-// Validar cantidad de residuos, asegura que el numero es entero positivo.
+
 function validarCantidad(cantidad) {
   const num = parseInt(cantidad);
   return !isNaN(num) && num > 0 && num <= 50;
@@ -228,7 +228,7 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// POST login (legacy)
+
 app.post('/api/login', async (req, res) => {
   const { codigo, password } = req.body;
 
@@ -295,8 +295,7 @@ app.get('/api/consejo-aleatorio', async (req, res) => {
   }
 });
 
-// Middleware de autenticación proteger rutas que requieren usuario logueado.
-//El servidor usa una clave secreta àra verificar ñps tokens JWT
+// Middleware de autenticación proteger rutas que requieren usuario logueado
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -319,7 +318,7 @@ function authenticateToken(req, res, next) {
   });
 }
 
-// Obtener datos del usuario autenticado (incluye puntuacion) usando Supabase
+
 app.get('/api/v1/users/profile', authenticateToken, async (req, res) => {
   try {
     if (!supabase) {
@@ -357,7 +356,7 @@ app.get('/api/v1/users/profile', authenticateToken, async (req, res) => {
   }
 });
 
-// GET obtiene los datos del usuario logueado (incluye nivel acumulado de misiones)
+
 app.get('/api/usuarios/me', authenticateToken, async (req, res) => {
   try {
     console.log('--- /api/usuarios/me ---');
@@ -398,7 +397,7 @@ app.get('/api/usuarios/me', authenticateToken, async (req, res) => {
   }
 });
 
-// Lee los puntos de la bd para dibujarlos en el mapa (Supabase)
+
 app.get('/api/mapa', async (req, res) => {
   try {
     if (!supabase) {
@@ -416,10 +415,7 @@ app.get('/api/mapa', async (req, res) => {
   }
 });
 
-// Mapa de alias de ubicaciones a coordenadas "lat,lng".
-// Aquí se configuran los módulos de CUCEI: el texto que
-// escriba el usuario (normalizado a minúsculas) se mapea
-// a las coordenadas correspondientes.
+
 const LOCATION_ALIAS_TO_COORDS = {
   // Módulo A
   'modulo a': '20.654078,-103.325756',
@@ -557,8 +553,7 @@ const LOCATION_ALIAS_TO_COORDS = {
   'z': '20.657387,-103.327804',
 };
 
-// Normaliza la ubicación: si coincide con un alias (por texto),
-// devuelve sus coordenadas; si no, deja el valor tal cual.
+
 function mapUbicacionToCoords(ubicacionRaw) {
   if (!ubicacionRaw || typeof ubicacionRaw !== 'string') return ubicacionRaw;
 
@@ -574,7 +569,7 @@ function mapUbicacionToCoords(ubicacionRaw) {
   return LOCATION_ALIAS_TO_COORDS[key] || ubicacionRaw;
 }
 
-// GET  leer todos los reportes desde la BD (Supabase)
+
 app.get('/api/reportes', async (req, res) => {
   try {
     if (!supabase) {
@@ -596,7 +591,7 @@ app.get('/api/reportes', async (req, res) => {
     res.status(500).json({ message: 'Error al obtener reportes' });
   }
 });
-// crear/enviar un nuevo reporte (Supabase)
+// crear/enviar un nuevo reporte 
 app.post('/api/reportes', async (req, res) => {
   const { usuario_id, titulo, descripcion, tipo, ubicacion } = req.body;
   try {
@@ -604,8 +599,7 @@ app.post('/api/reportes', async (req, res) => {
       return res.status(500).json({ message: 'Supabase no está configurado.' });
     }
 
-    // Si el usuario escribió un alias como "Modulo P",
-    // lo convertimos a coordenadas definidas en LOCATION_ALIAS_TO_COORDS.
+    
     const ubicacionProcesada = mapUbicacionToCoords(ubicacion);
 
     const { error } = await supabase.from('reportes').insert([
@@ -624,7 +618,7 @@ app.post('/api/reportes', async (req, res) => {
   }
 });
 
-// Obtiene fechas de la base de datos para ponerlas en el calendario (Supabase)
+// Obtiene fechas de la base de datos para ponerlas en el calendario
 app.get('/api/fechas-importantes', async (req, res) => {
   try {
     if (!supabase) {
@@ -649,7 +643,7 @@ app.get('/api/fechas-importantes', async (req, res) => {
 });
 
 // ---PANEL DE ADMINISTRADOR ---
-// 1. Estadisticas geenrales de los totales de reportes, susuarios, eventos
+// 1. Estadisticas geenrales de los totales de reportes, usuarios, eventos
 app.get('/api/admin/stats', verifyAdmin, async (req, res) => {
   try {
     if (!supabase) {
@@ -682,7 +676,7 @@ app.get('/api/admin/reportes', verifyAdmin, async (req, res) => {
       return res.status(500).json({ message: 'Supabase no está configurado.' });
     }
 
-    // Traer todos los campos tal como están en la tabla, ordenados por fecha más reciente
+    
     const { data, error } = await supabase
       .from('reportes')
       .select('*')
@@ -805,7 +799,7 @@ app.delete('/api/admin/eventos/:id', verifyAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ message: 'Error eliminando evento' }); }
 });
 
-// 4. Gestión de Novedades (Supabase)
+// 4. Gestión de Novedades 
 function normalizarFechaPublicacion(fechaRaw) {
   try {
     if (!fechaRaw) {
@@ -817,20 +811,20 @@ function normalizarFechaPublicacion(fechaRaw) {
       return valor;
     }
 
-    // Formato común en español: DD/MM/YYYY
+    // DD/MM/YYYY
     const matchDMY = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(valor);
     if (matchDMY) {
       const [, dd, mm, yyyy] = matchDMY;
       return `${yyyy}-${mm}-${dd}`;
     }
 
-    // Intentar parseo genérico
+    
     const d = new Date(valor);
     if (!Number.isNaN(d.getTime())) {
       return d.toISOString().slice(0, 10);
     }
 
-    // Si todo falla, usar la fecha actual para evitar errores de formato
+   
     return new Date().toISOString().slice(0, 10);
   } catch {
     return new Date().toISOString().slice(0, 10);
@@ -920,12 +914,12 @@ app.delete('/api/admin/novedades/:id', verifyAdmin, async (req, res) => {
   }
 });
 
-// 5. Verifica que el usuario sea administrador
+// Verifica que el usuario sea administrador
 app.get('/api/admin/me', verifyAdmin, (req, res) => {
   res.json({ admin: true, user: req.user });
 });
 
-// 5. Gestión de Mapa (Supabase)
+// 5. Gestión de Mapa
 app.post('/api/admin/mapa', verifyAdmin, async (req, res) => {
   const { nombre, descripcion, latitud, longitud, categoria } = req.body;
   try {
@@ -1024,12 +1018,12 @@ app.delete('/api/admin/mapa/:id', verifyAdmin, async (req, res) => {
 });
 
 // 6. Analítica de Mapa (K-Means)
-//   Su objetivo es generar un heatmap inteligente que ayude a los administradores a detectar áreas críticas 
+// Su objetivo es generar un heatmap inteligente que ayude a los administradores a detectar áreas críticas 
 // o recurrentes dentro del campus y priorizar acciones de mantenimiento o atención.
-//Define un endpoint GET que solo pueden usar administradores
+// Define un endpoint GET que solo pueden usar administradores
 app.get('/api/admin/analytics/heatmap', verifyAdmin, async (req, res) => {
   try {
-    //Lee parámetros enviados en la URL( Dias y numero de clusters)
+    //Lee parámetros enviados en la URL (Dias y numero de clusters)
     const now = new Date();
     const daysParam = parseInt(req.query.days, 10);
     const kParam = parseInt(req.query.k, 10);
@@ -1202,7 +1196,7 @@ app.get('/api/admin/analytics/heatmap', verifyAdmin, async (req, res) => {
         const tipoDominante = Object.entries(c.tipos).sort((a, b) => b[1] - a[1])[0]?.[0] || 'desconocido';
         const estadoDominante = Object.entries(c.estados).sort((a, b) => b[1] - a[1])[0]?.[0] || 'desconocido';
 
-        // Radio aproximado en metros usando distancia euclídea pequeña (campus)
+        // Radio aproximado en metros usando distancia euclídeana pequeña (campus)
         const radiusMeters = Math.sqrt(c.maxDistance2) * 111_000; // ~111km por grado
 
         return {
@@ -1246,7 +1240,7 @@ app.get('/api/admin/analytics/heatmap', verifyAdmin, async (req, res) => {
 });
 
 
-// POST guardar puntaje solo commprueba el total obtenido y el actual, y si es mayor, el puntaje se cambia en la bd.
+
 app.post('/api/usuarios/me/guardar-mejor-puntaje', authenticateToken, async (req, res) => {
   const { puntos } = req.body;
   const userId = req.user?.id;
@@ -1304,7 +1298,7 @@ app.post('/api/usuarios/me/guardar-mejor-puntaje', authenticateToken, async (req
   }
 });
 
-// POST agregar puntos de misiones al campo "nivel" del usuario (acumulado global)
+
 app.post('/api/usuarios/me/agregar-puntos-misiones', authenticateToken, async (req, res) => {
   const { puntos } = req.body;
   const userId = req.user?.id;
@@ -1358,7 +1352,7 @@ app.post('/api/usuarios/me/agregar-puntos-misiones', authenticateToken, async (r
   }
 });
 
-// POST guardar mejor puntaje del juego animado (puntuacion_segundo)
+// guardar mejor puntaje del juego animado 
 app.use((err, req, res, next) => {
   console.error('Error global:', err);
   res.status(500).json({ message: 'Error global del servidor.', error: err.message });
@@ -1425,7 +1419,7 @@ app.post('/api/usuarios/me/guardar-mejor-puntaje-segundo', authenticateToken, as
 app.get('/api/v1/content/news', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM novedades ORDER BY fecha_publicacion DESC');
-   //Muestra las novedades
+   
     const novedades = result.rows.map(novedad => ({
         id: novedad.id,
         title: novedad.titulo,
@@ -1473,7 +1467,7 @@ app.get('/api/v1/content/calendar', async (req, res) => {
 });
 
 
-// GET todos los productos (desde Supabase)
+
 app.get('/api/v1/products', async (req, res) => {
   try {
     if (!supabase) {
@@ -1498,7 +1492,7 @@ app.get('/api/v1/products', async (req, res) => {
   }
 });
 
-// GET productos por categoría (desde Supabase)
+
 app.get('/api/v1/products/category/:categoria', async (req, res) => {
   try {
     if (!supabase) {
@@ -1534,7 +1528,7 @@ app.get('/api/v1/products/category/:categoria', async (req, res) => {
   }
 });
 
-// GET productos (ruta usada por el juego, desde Supabase)
+
 app.get('/api/v1/products/random/:cantidad', async (req, res) => {
   try {
     if (!supabase) {
@@ -1580,7 +1574,7 @@ const diasEspeciales = [
 ];
 
 
-// GET novedades para el carrusel solo muestra las que no estan en visibilidad false (Supabase)
+// novedades para el carrusel solo muestra las que no estan en visibilidad false 
 app.get('/api/novedades', async (req, res) => {
   try {
     if (!supabase) {
@@ -1613,7 +1607,7 @@ app.get('/api/novedades', async (req, res) => {
   }
 });
 
-// PUT visibilidad de una novedad (mostrar/ocultar en carrusel)
+// visibilidad de una novedad (mostrar/ocultar en carrusel)
 app.put('/api/admin/novedades/:id/visibilidad', verifyAdmin, async (req, res) => {
   const { id } = req.params;
   const { visible } = req.body;
@@ -1653,7 +1647,7 @@ app.put('/api/admin/novedades/:id/visibilidad', verifyAdmin, async (req, res) =>
   }
 });
 
-// Admin: listar todas las novedades sin filtrar visibilidad (Supabase)
+// Admin: listar todas las novedades sin filtrar visibilidad 
 app.get('/api/admin/novedades', verifyAdmin, async (req, res) => {
   try {
     if (!supabase) {
@@ -1688,7 +1682,7 @@ app.get('/api/admin/novedades', verifyAdmin, async (req, res) => {
   }
 });
 
-// GET eventos si acceden a mas informacion se hace los detalles (Supabase)
+
 app.get('/api/eventos', async (req, res) => {
   try {
     if (!supabase) {
@@ -1826,7 +1820,7 @@ app.get('/api/admin/heatmap/reportes', verifyAdmin, async (req, res) => {
       return res.status(500).json({ message: 'Supabase no está configurado.' });
     }
 
-    // Leer todos los reportes desde Supabase; luego filtramos por ubicación y ventana de días
+    
     const { data: reportes, error } = await supabase
       .from('reportes')
       .select('id, titulo, descripcion, tipo, ubicacion, estado, fecha_reporte');
@@ -1928,13 +1922,13 @@ app.get('/api/admin/heatmap/reportes', verifyAdmin, async (req, res) => {
   }
 });
 
-// GET calendario combina dias especiales, api de nager.date, fechas importantes de la bd, eventos y los muestra en el calendario
+
 app.get('/api/calendario', async (req, res) => {
     try {
-        // Iniciar con el array de días especiales (siempre disponible)
+        
         let calendarioCompleto = [...diasEspeciales];
 
-        // Intentar obtener fechas importantes de la BD
+        
         try {
       if (!supabase) throw new Error('Supabase no configurado');
 
