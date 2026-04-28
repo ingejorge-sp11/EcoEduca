@@ -38,35 +38,46 @@ const GamificationDashboard = ({ user }) => {
   const [tabActiva, setTabActiva] = useState("resumen");
   const [puntosUsuario, setPuntosUsuario] = useState(0);
   useEffect(() => {
-    if (typeof window === "undefined") {
+    if (typeof window === "undefined" || !user || !user.id) {
       setPuntosUsuario(0);
       return;
     }
 
-    const cargarDesdeLocalStorage = () => {
-      if (!user || !user.id) {
-        setPuntosUsuario(0);
-        return;
-      }
-      const key = `misiones_diarias_${user.id}`;
+    const sincronizarDatos = async () => {
       try {
-        const progreso = JSON.parse(window.localStorage.getItem(key)) || {};
-        const puntos = Number(progreso.puntos_totales || 0);
-        setPuntosUsuario(isNaN(puntos) ? 0 : puntos);
-      } catch {
-        setPuntosUsuario(0);
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/usuarios/me`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          
+          const puntosDB = Number(data.nivel || 0);
+          setPuntosUsuario(puntosDB);
+          
+          
+          const key = `misiones_diarias_${user.id}`;
+          const progresoLocal = JSON.parse(localStorage.getItem(key)) || {};
+          progresoLocal.puntos_totales = puntosDB;
+          localStorage.setItem(key, JSON.stringify(progresoLocal));
+        }
+      } catch (err) {
+        console.error("Error sincronizando puntos desde la BD:", err);
       }
     };
 
-    cargarDesdeLocalStorage();
+    // 1. Cargar datos desde Railway/Supabase al entrar al Dashboard
+    sincronizarDatos();
 
-    const handler = () => cargarDesdeLocalStorage();
+    // 2. Escuchar cuando se completen misiones para recargar los puntos
+    const handler = () => sincronizarDatos();
     window.addEventListener("ecoedu:puntos-misiones-actualizados", handler);
-    window.addEventListener("storage", handler);
 
     return () => {
       window.removeEventListener("ecoedu:puntos-misiones-actualizados", handler);
-      window.removeEventListener("storage", handler);
     };
   }, [user]);
 
