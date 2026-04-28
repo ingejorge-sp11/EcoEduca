@@ -112,6 +112,23 @@ const verifyAdmin = (req, res, next) => {
 };
 // --- RUTAS DE LA API ---
 
+// Obtener perfil completo del usuario logueado
+app.get('/api/usuarios/me', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { data, error } = await supabase
+      .from('usuarios')
+      .select('id, nombre, puntuacion, puntuacion_segundo, nivel')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al obtener perfil' });
+  }
+});
+
 app.get('/api/usuarios/:id', async (req, res) => {
   const { id } = req.params;
   try {
