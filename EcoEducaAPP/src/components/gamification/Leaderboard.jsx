@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 // import { motion } from "framer-motion";
 import { Trophy } from "lucide-react";
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3002/api';
 
 const Leaderboard = ({ user }) => {
   const [usuarios, setUsuarios] = useState([]); // top 6
