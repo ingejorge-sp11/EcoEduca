@@ -2,11 +2,6 @@ import React from 'react';
 import { ArrowLeft, Calendar, MapPin, Clock } from 'lucide-react';
 import './eventos.css';
 
-/**
- * COMPONENTE: EventosView
- * Muestra la lista de eventos disponibles en la plataforma.
- * Permite seleccionar un evento para ver sus detalles.
- */
 const EventosView = ({ data, onSelectEvento }) => (
     <section className="relative bg-gray-50 min-h-screen overflow-hidden py-12">
         <div className="absolute inset-0 opacity-5">
