@@ -28,7 +28,7 @@ const MisionesDiarias = ({ user, puntosActuales }) => {
     if (user && user.id) {
       try {
         // Endpoint que devuelve los reportes del usuario (puede devolver varios días)
-        const res = await fetch(`/api/reportes?usuario_id=${user.id}`);
+        const res = await fetch(`${API_URL}/reportes?usuario_id=${user.id}`);
         if (res.ok) {
           const data = await res.json();
           // Filtrar reportes por fecha_reporte igual a hoy y estado 'aprobado'
