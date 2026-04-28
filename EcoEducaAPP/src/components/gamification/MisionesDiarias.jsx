@@ -204,7 +204,7 @@ const MisionesDiarias = ({ user, puntosActuales }) => {
             </div>
             <div className="text-right">
               <p className="text-sm text-gray-600">Puntos totales hoy</p>
-              <p className="text-3xl font-bold text-yellow-600">+{JSON.parse(localStorage.getItem(getProgresoKey()))?.puntos_totales || 0}</p>
+              <p className="text-3xl font-bold text-yellow-600">{puntosActuales}</p>
             </div>
           </div>
         </div>
