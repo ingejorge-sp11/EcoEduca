@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Calendar, CheckCircle2, Circle, Target } from "lucide-react";
 import { calcularMisionesTemporadaParaUsuario } from "../../utils/misionesTemporadaRules";
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3002/api';
 
 const MisionesTemporada = ({ user }) => {
   const [misiones, setMisiones] = useState([]);
@@ -14,15 +15,55 @@ const MisionesTemporada = ({ user }) => {
     const hoy = new Date();
     setFechaActual(hoy.toLocaleDateString("es-ES"));
 
-    const recargar = () => {
+    const recargar = async () => {
       const calculadas = calcularMisionesTemporadaParaUsuario(user, new Date());
       setMisiones(calculadas);
       setLoading(false);
+
+      //LOGICA DE GUARDADO EN BD
+      if (user && user.id) {
+        let puntosAsumar = 0;
+        let recompensasNuevas = false;
+        const rewardKey = `recompensas_temporada_cobrada_${user.id}`;
+        const recompensasCobradas = JSON.parse(localStorage.getItem(rewardKey)) || {};
+
+        // Verificamos si hay alguna misión completada que no hayamos cobrado aún
+        calculadas.forEach(mision => {
+          if (mision.completada && !recompensasCobradas[mision.id]) {
+            puntosAsumar += mision.puntos;
+            recompensasCobradas[mision.id] = true;
+            recompensasNuevas = true;
+          }
+        });
+
+        // Si hay puntos nuevos, los mandamos a Railway
+        if (recompensasNuevas && puntosAsumar > 0) {
+          localStorage.setItem(rewardKey, JSON.stringify(recompensasCobradas)); // Guardamos localmente que ya se cobró
+          
+          try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`${API_URL}/usuarios/me/agregar-puntos-misiones`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+              },
+              body: JSON.stringify({ puntos: puntosAsumar })
+            });
+            
+            if (res.ok) {
+              
+              window.dispatchEvent(new Event('ecoedu:puntos-misiones-actualizados'));
+            }
+          } catch (error) {
+            console.error("Error al guardar puntos de temporada:", error);
+          }
+        }
+      }
     };
 
     recargar();
 
-    // Escuchar actualizaciones de misiones de temporada
     const handler = () => recargar();
     if (typeof window !== "undefined") {
       window.addEventListener("ecoedu:misiones-temporada-actualizadas", handler);
