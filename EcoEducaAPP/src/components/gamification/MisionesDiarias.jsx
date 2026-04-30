@@ -133,17 +133,16 @@ const MisionesDiarias = ({ user, puntosActuales }) => {
       if (user && user.id && incrementoGlobal > 0) {
         try {
           const token = localStorage.getItem('token');
-          fetch(`${API_URL}/usuarios/me/agregar-puntos-misiones`, {
+          // 1. Agregamos "await" para obligar al código a esperar a Railway
+          await fetch(`${API_URL}/usuarios/me/agregar-puntos-misiones`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               ...(token ? { 'Authorization': `Bearer ${token}` } : {})
             },
             body: JSON.stringify({ puntos: incrementoGlobal })
-          })
-          .then(res => res.json())
-          .then(data => console.log("Puntos de misión guardados correctamente:", data))
-          .catch(err => console.error("Error al guardar puntos:", err));
+          });
+          console.log("¡Los puntos se guardaron correctamente en la BD!");
         } catch (error) {
           console.error("Error de ejecución al guardar puntos:", error);
         }
@@ -153,7 +152,7 @@ const MisionesDiarias = ({ user, puntosActuales }) => {
         window.dispatchEvent(new Event('ecoedu:puntos-misiones-actualizados'));
       } catch (e) {}
     }
-    
+
     setMisiones(misionesHoy);
     setLoading(false);
   };
