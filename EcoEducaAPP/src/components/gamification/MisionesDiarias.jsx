@@ -153,6 +153,10 @@ const MisionesDiarias = ({ user, puntosActuales }) => {
         window.dispatchEvent(new Event('ecoedu:puntos-misiones-actualizados'));
       } catch (e) {}
     }
+    
+    setMisiones(misionesHoy);
+    setLoading(false);
+  };
 
   useEffect(() => {
     cargarMisiones();
