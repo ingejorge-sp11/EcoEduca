@@ -982,12 +982,14 @@ app.post('/api/admin/mapa', verifyAdmin, async (req, res) => {
       console.error('Error creando punto (Supabase admin):', error.message, 'detalle:', error.details);
       return res.status(500).json({ message: 'Error creando punto', error: error.message });
     }
+    // Le avisamos al frontend que todo salió perfecto.
+    return res.status(201).json({ message: 'Punto creado exitosamente', punto: data });
+
   } catch (e) {
     console.error('Error creando punto (admin):', e);
     res.status(500).json({ message: 'Error creando punto' });
   }
 });
-
 app.put('/api/admin/mapa/:id', verifyAdmin, async (req, res) => {
   const { id } = req.params;
   const { nombre, descripcion, latitud, longitud, categoria } = req.body;
