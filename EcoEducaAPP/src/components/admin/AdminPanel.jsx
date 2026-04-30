@@ -731,23 +731,52 @@ export default function AdminPanel() {
                     
                     <div className="flex gap-2 pt-4 border-t border-gray-200 mt-4">
                       <button className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded font-medium inline-flex items-center gap-2 transition-colors flex-1 justify-center" onClick={async ()=>{
+                        // 1. Validaciones previas para evitar rechazos silenciosos del backend
+                        if(!mapForm.nombre || !mapForm.categoria) {
+                            alert("Por favor, ingresa el nombre y selecciona una categoría.");
+                            return;
+                        }
                         if(!mapForm.latitud || !mapForm.longitud) {
                             alert("Por favor, haz clic en el mapa de la derecha para seleccionar la ubicación exacta.");
                             return;
                         }
+
                         const token = localStorage.getItem('token');
                         const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type':'application/json' };
                         const payload = { ...mapForm, latitud: parseFloat(mapForm.latitud), longitud: parseFloat(mapForm.longitud) };
-                        const res = await fetch(`${API_URL}/admin/mapa`, { method:'POST', headers, body: JSON.stringify(payload) });
-                        if (res.ok) {
-                          setNotif({ type:'success', msg:'Punto creado exitosamente' });
-                          const m = await fetch(`${API_URL}/mapa`);
-                          if (m.ok) setPuntos(await m.json());
-                          setMapForm({ nombre:'', descripcion:'', latitud:'', longitud:'', categoria:'' });
-                          setSelectedMapPosition(null);
-                          setShowCreatePointForm(false);
-                          setMapaSubTab('listar');
-                        } else setNotif({ type:'error', msg:'Error creando punto' });
+                        
+                        try {
+                          const res = await fetch(`${API_URL}/admin/mapa`, { method:'POST', headers, body: JSON.stringify(payload) });
+                          
+                          if (res.ok) {
+                            setNotif({ type:'success', msg:'Punto creado exitosamente' });
+                            
+                            // Recargar los puntos
+                            const m = await fetch(`${API_URL}/mapa`);
+                            if (m.ok) setPuntos(await m.json());
+                            
+                            // Limpiar y cerrar el formulario
+                            setMapForm({ nombre:'', descripcion:'', latitud:'', longitud:'', categoria:'' });
+                            setSelectedMapPosition(null);
+                            setShowCreatePointForm(false);
+                            setMapaSubTab('listar');
+                            
+                            // Subir la pantalla y ocultar notificación después de 4 segundos
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                            setTimeout(() => setNotif(null), 4000);
+                            
+                          } else {
+                            // Extraer el mensaje real del backend para saber por qué falló
+                            const errData = await res.json().catch(()=>({}));
+                            const errorMessage = errData.message || 'Error creando punto (Revisa la consola)';
+                            
+                            setNotif({ type:'error', msg: `Error: ${errorMessage}` });
+                            window.scrollTo({ top: 0, behavior: 'smooth' }); // Subir para ver el error
+                          }
+                        } catch (error) {
+                          setNotif({ type:'error', msg: 'Error de red al contactar al servidor.' });
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
                       }}>
                         <Save className="h-4 w-4"/> Guardar Punto
                       </button>
