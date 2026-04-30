@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3002/api';
 
 const residuos = [
   {
@@ -14,7 +15,7 @@ const residuos = [
   },
   {
     nombre: 'Lata de aluminio',
-    imagen: 'https://cdn-icons-png.flaticon.com/512/686/686589.png',
+    imagen: 'https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/lata.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9sYXRhLnBuZyIsImlhdCI6MTc3NzUwOTQ1NiwiZXhwIjoxODA5MDQ1NDU2fQ.Ma2hSuBCLjZOJG7IhNw4UajxiIV4wWkDkaR9Xk3obSQ',
     procesos: [
       { nombre: 'Fundir', correcto: true, explicacion: 'Las latas de aluminio se funden para crear nuevas piezas.' },
       { nombre: 'Triturar', correcto: false, explicacion: 'No es necesario triturar el aluminio, se funde directamente.' },
@@ -24,7 +25,7 @@ const residuos = [
   },
   {
     nombre: 'Papel',
-    imagen: 'https://cdn-icons-png.flaticon.com/512/1046/1046857.png',
+    imagen: 'https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/papel.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9wYXBlbC5wbmciLCJpYXQiOjE3Nzc1MDk0NDIsImV4cCI6MTgwOTA0NTQ0Mn0.T5S1bz-kcXpWFryni1oizjlgl_bE5wIU2dksj4m8x6w',
     procesos: [
       { nombre: 'Lavar', correcto: true, explicacion: 'El papel se lava y se desintegra para eliminar tintas e impurezas.' },
       { nombre: 'Fundir', correcto: false, explicacion: 'El papel no se funde, se lava y se prensa.' },
@@ -34,7 +35,7 @@ const residuos = [
   },
   {
     nombre: 'Cartón',
-    imagen: 'https://cdn-icons-png.flaticon.com/512/1046/1046858.png',
+    imagen: 'https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/carton.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9jYXJ0b24ucG5nIiwiaWF0IjoxNzc3NTA5NDIwLCJleHAiOjE4MDkwNDU0MjB9.j7Y3ktrXF9TtQK1jS6s21LJXoSf_tGLG_WmVMJnCVbw',
     procesos: [
       { nombre: 'Prensar', correcto: true, explicacion: 'El cartón se prensa para compactarlo antes de reciclar.' },
       { nombre: 'Fundir', correcto: false, explicacion: 'El cartón no se funde, se prensa y recicla.' },
@@ -44,7 +45,7 @@ const residuos = [
   },
   {
     nombre: 'Vidrio',
-    imagen: 'https://cdn-icons-png.flaticon.com/512/2921/2921820.png',
+    imagen: 'https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/vidrio.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy92aWRyaW8ucG5nIiwiaWF0IjoxNzc3NTA5NDcxLCJleHAiOjE4MDkwNDU0NzF9.m_q51g5qgBtmBeFUowCM6VlWPaaj6KwuDLKHgLMSEGY',
     procesos: [
       { nombre: 'Fundir', correcto: true, explicacion: 'El vidrio se funde para crear nuevos envases.' },
       { nombre: 'Triturar', correcto: false, explicacion: 'El triturado es previo, pero el proceso clave es fundir.' },
@@ -54,7 +55,7 @@ const residuos = [
   },
   {
     nombre: 'Tetrapak',
-    imagen: 'https://cdn-icons-png.flaticon.com/512/1046/1046861.png',
+    imagen: 'https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/tretapack.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy90cmV0YXBhY2sucG5nIiwiaWF0IjoxNzc3NTA5NDg3LCJleHAiOjE4MDkwNDU0ODd9.2TJQCXDV4j4JBWGrzs4JHNwGnFpMSi-EAPb_4sD5O4Y',
     procesos: [
       { nombre: 'Separar capas', correcto: true, explicacion: 'El tetrapak se separa en capas de cartón, plástico y aluminio.' },
       { nombre: 'Fundir', correcto: false, explicacion: 'Primero se separan las capas antes de fundir.' },
@@ -64,7 +65,7 @@ const residuos = [
   },
   {
     nombre: 'Residuos electrónicos',
-    imagen: 'https://cdn-icons-png.flaticon.com/512/1046/1046870.png',
+    imagen: 'https://xkdhffhaceflgmmgjmzn.supabase.co/storage/v1/object/sign/products/electronico.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV80OTk4NTk1ZC03MWM5LTRiYTctYTdmYS0wMTU0ZGU3ZmY0ZGQiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJwcm9kdWN0cy9lbGVjdHJvbmljby5wbmciLCJpYXQiOjE3Nzc1MDk0OTksImV4cCI6MTgwOTA0NTQ5OX0.vyFeIjNoqVyh4Lr75zaxl19cpZHs-v3NQLVvdc1fHy0',
     procesos: [
       { nombre: 'Desmontar', correcto: true, explicacion: 'Los electrónicos se desmontan para separar componentes y materiales.' },
       { nombre: 'Fundir', correcto: false, explicacion: 'No se funden directamente, primero se desmontan.' },
@@ -97,45 +98,28 @@ export default function JuegoReciclajeAnimado() {
   const [errorUsuario, setErrorUsuario] = useState(null);
   const [procesosMezclados, setProcesosMezclados] = useState(() => [...residuos[0].procesos]);
 
-  // Función para obtener el best score actualizado
+  // Función para obtener el best score directamente de la BD
   const fetchBestScore = async () => {
     setErrorUsuario(null);
-    // Preferir userId desde localStorage para consistencia incluso si el backend está caído
-    try {
-      const u = JSON.parse(localStorage.getItem('user'));
-      if (u && (u.id || u._id)) {
-        setUserId(u.id || u._id);
-      }
-    } catch (_) {}
     const token = localStorage.getItem('token');
+    
     if (!token) {
       setErrorUsuario('No se encontró el token de sesión. Por favor, inicia sesión de nuevo.');
       return;
     }
+
     try {
-      // Intentar primero el endpoint estable /v1/users/profile
-      const resProfile = await fetch('/api/v1/users/profile', {
+      // Usamos el endpoint confiable que creaste para el perfil
+      const res = await fetch(`${API_URL}/usuarios/me`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (resProfile.ok) {
-        const profile = await resProfile.json();
-        setUserId(profile.id);
-        setHighScore(profile.puntuacion_segundo || 0);
-        setErrorUsuario(null);
+      
+      if (res.ok) {
+        const userData = await res.json();
+        setUserId(userData.id);
+        setHighScore(userData.puntuacion_segundo || 0);
       } else {
-        // Fallback a /usuarios/me si el perfil falla
-        const resMe = await fetch('/api/usuarios/me', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (resMe.ok) {
-          const userData = await resMe.json();
-          setUserId(userData.id);
-          setHighScore(userData.puntuacion_segundo || 0);
-        } else if (resMe.status === 401 || resMe.status === 403) {
-          setErrorUsuario('Sesión expirada o token inválido. Por favor, vuelve a iniciar sesión.');
-        } else {
-          setErrorUsuario('No se pudo obtener datos del usuario.');
-        }
+        setErrorUsuario('Sesión expirada o token inválido. Por favor, vuelve a iniciar sesión.');
       }
     } catch (err) {
       setErrorUsuario('No se pudo conectar con el servidor.');
@@ -147,7 +131,7 @@ export default function JuegoReciclajeAnimado() {
     const token = localStorage.getItem('token');
     if (!token) return;
     try {
-      const response = await fetch('/api/usuarios/me/guardar-mejor-puntaje-segundo', {
+      const response = await fetch(`${API_URL}/usuarios/me/guardar-mejor-puntaje-segundo`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -204,6 +188,7 @@ export default function JuegoReciclajeAnimado() {
           if (nuevoScore >= PUNTAJE_MISION) {
             const uid = userId ?? 'anon';
             localStorage.setItem(`reciclaje_puntos_${hoyISO}_u${uid}`, nuevoScore);
+            window.dispatchEvent(new Event('storage'));
           }
           setFinal(true);
         }
@@ -217,6 +202,7 @@ export default function JuegoReciclajeAnimado() {
     if (score >= PUNTAJE_MISION) {
       const uid = userId ?? 'anon';
       localStorage.setItem(`reciclaje_puntos_${hoyISO}_u${uid}`, score);
+      window.dispatchEvent(new Event('storage'));
     }
     setIndice(0);
     setAcierto(null);
