@@ -94,36 +94,41 @@ const MisionesDiarias = ({ user, puntosActuales }) => {
       },
     ];
     // Sumar puntos automáticamente si alguna misión completada no está sumada
-    let puntosTotales = progreso.puntos_totales || 0;
+    // Volvemos a leer la memoria AQUÍ (después del await de los reportes)
+    // para evitar que la asincronía de React nos duplique los puntos.
+    let progresoFresco = JSON.parse(localStorage.getItem(getProgresoKey())) || {};
+    let puntosTotales = progresoFresco.puntos_totales || 0;
     let actualizados = false;
     let incrementoGlobal = 0;
-    if (misionesHoy[0].completada && (!progreso._sumado_reporte)) {
+
+    if (misionesHoy[0].completada && (!progresoFresco._sumado_reporte)) {
       puntosTotales += misionesHoy[0].puntos;
       incrementoGlobal += misionesHoy[0].puntos;
-      progreso._sumado_reporte = true;
+      progresoFresco._sumado_reporte = true;
       actualizados = true;
     }
-    if (misionesHoy[1].completada && (!progreso._sumado_residuos)) {
+    if (misionesHoy[1].completada && (!progresoFresco._sumado_residuos)) {
       puntosTotales += misionesHoy[1].puntos;
       incrementoGlobal += misionesHoy[1].puntos;
-      progreso._sumado_residuos = true;
+      progresoFresco._sumado_residuos = true;
       actualizados = true;
     }
-    if (misionesHoy[2].completada && (!progreso._sumado_reciclaje)) {
+    if (misionesHoy[2].completada && (!progresoFresco._sumado_reciclaje)) {
       puntosTotales += misionesHoy[2].puntos;
       incrementoGlobal += misionesHoy[2].puntos;
-      progreso._sumado_reciclaje = true;
+      progresoFresco._sumado_reciclaje = true;
       actualizados = true;
     }
-    if (misionesHoy[3].completada && (!progreso._sumado_basura)) {
+    if (misionesHoy[3].completada && (!progresoFresco._sumado_basura)) {
       puntosTotales += misionesHoy[3].puntos;
       incrementoGlobal += misionesHoy[3].puntos;
-      progreso._sumado_basura = true;
+      progresoFresco._sumado_basura = true;
       actualizados = true;
     }
+
     if (actualizados) {
-      progreso.puntos_totales = puntosTotales;
-      localStorage.setItem(getProgresoKey(), JSON.stringify(progreso));
+      progresoFresco.puntos_totales = puntosTotales;
+      localStorage.setItem(getProgresoKey(), JSON.stringify(progresoFresco));
 
       if (user && user.id && incrementoGlobal > 0) {
         try {
@@ -134,12 +139,10 @@ const MisionesDiarias = ({ user, puntosActuales }) => {
               'Content-Type': 'application/json',
               ...(token ? { 'Authorization': `Bearer ${token}` } : {})
             },
-            body: JSON.stringify({ 
-              puntos: incrementoGlobal 
-            })
+            body: JSON.stringify({ puntos: incrementoGlobal })
           })
           .then(res => res.json())
-          .then(data => console.log("Puntos de misión guardados:", data))
+          .then(data => console.log("Puntos de misión guardados correctamente:", data))
           .catch(err => console.error("Error al guardar puntos:", err));
         } catch (error) {
           console.error("Error de ejecución al guardar puntos:", error);
@@ -148,13 +151,8 @@ const MisionesDiarias = ({ user, puntosActuales }) => {
 
       try {
         window.dispatchEvent(new Event('ecoedu:puntos-misiones-actualizados'));
-      } catch (e) {
-        
-      }
+      } catch (e) {}
     }
-    setMisiones(misionesHoy);
-    setLoading(false);
-  };
 
   useEffect(() => {
     cargarMisiones();
